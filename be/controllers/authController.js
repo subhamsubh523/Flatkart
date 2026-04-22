@@ -62,9 +62,10 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
   const found = await findByEmail(email);
   if (!found) return res.status(400).json({ message: "User does not exist. Please register." });
+  if (role && found.doc.role !== role) return res.status(403).json({ message: `No ${role} account found with this email.` });
   if (!await bcrypt.compare(password, found.doc.password)) return res.status(400).json({ message: "Invalid password. Please try again." });
   if (found.doc.blocked) return res.status(403).json({ message: "Your account has been blocked. Please contact support." });
   const token = jwt.sign({ id: found.doc._id }, process.env.JWT_SECRET);
@@ -129,6 +130,15 @@ export const verifyOTP = async (req, res) => {
   const owner = await Owner.findOne({ email, otp, otpExpiry: { $gt: Date.now() } });
   if (!user && !owner) return res.status(400).json({ message: "Invalid or expired OTP" });
   res.json({ message: "OTP verified" });
+};
+
+export const updatePhone = async (req, res) => {
+  const { phone } = req.body;
+  if (!phone?.trim()) return res.status(400).json({ message: "Phone number is required" });
+  const found = await findById(req.user.id);
+  if (!found) return res.status(404).json({ message: "User not found" });
+  const updated = await found.model.findByIdAndUpdate(req.user.id, { phone }, { new: true }).select("-password");
+  res.json({ phone: updated.phone });
 };
 
 export const resetPassword = async (req, res) => {

@@ -1,5 +1,5 @@
 import express from "express";
-import { register, login, me, updateProfile, changePassword, forgotPassword, verifyOTP, resetPassword, sendRegisterOTP } from "../controllers/authController.js";
+import { register, login, me, updateProfile, changePassword, forgotPassword, verifyOTP, resetPassword, sendRegisterOTP, updatePhone } from "../controllers/authController.js";
 import auth from "../middleware/authMiddleware.js";
 import { uploadAvatar } from "../middleware/upload.js";
 
@@ -14,5 +14,7 @@ router.put("/change-password", auth, changePassword);
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-otp", verifyOTP);
 router.post("/reset-password", resetPassword);
+
+router.put("/update-phone", auth, updatePhone);
 
 export default router;

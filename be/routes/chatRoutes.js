@@ -3,15 +3,16 @@ import auth from "../middleware/authMiddleware.js";
 import Message from "../models/message.js";
 import Owner from "../models/owner.js";
 import User from "../models/user.js";
+import { upload, uploadToCloudinary } from "../middleware/upload.js";
 
 const router = express.Router();
 
 // Get a single user's name by id (for resolving new conversations)
 router.get("/user/:id", auth, async (req, res) => {
-  let user = await Owner.findById(req.params.id).select("name role avatar").catch(() => null);
-  if (!user) user = await User.findById(req.params.id).select("name role avatar").catch(() => null);
+  let user = await Owner.findById(req.params.id).select("name role avatar phone email").catch(() => null);
+  if (!user) user = await User.findById(req.params.id).select("name role avatar phone email").catch(() => null);
   if (!user) return res.status(404).json({ message: "User not found" });
-  res.json({ name: user.name, role: user.role, avatar: user.avatar });
+  res.json({ name: user.name, role: user.role, avatar: user.avatar, phone: user.phone, email: user.email });
 });
 
 // Get unread message count for current user
@@ -27,6 +28,16 @@ router.patch("/read/:sender_id", auth, async (req, res) => {
     { read: true }
   );
   res.json({ ok: true });
+});
+
+// Upload chat image to Cloudinary
+router.post("/upload-image", auth, upload.single("image"), async (req, res) => {
+  try {
+    const result = await uploadToCloudinary(req.file.buffer, "flatkart/chat");
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    res.status(500).json({ message: "Image upload failed" });
+  }
 });
 
 // Send a message
@@ -60,10 +71,10 @@ router.get("/conversations", auth, async (req, res) => {
     const otherId = m.sender_id.toString() === req.user.id ? m.receiver_id.toString() : m.sender_id.toString();
     if (seen.has(otherId)) continue;
     seen.add(otherId);
-    let other = await Owner.findById(otherId).select("name role avatar").catch(() => null);
-    if (!other) other = await User.findById(otherId).select("name role avatar").catch(() => null);
+    let other = await Owner.findById(otherId).select("name role avatar phone email").catch(() => null);
+    if (!other) other = await User.findById(otherId).select("name role avatar phone email").catch(() => null);
     const unread = await Message.countDocuments({ sender_id: otherId, receiver_id: req.user.id, read: false });
-    conversations.push({ userId: otherId, name: other?.name || "Unknown", role: other?.role || "", avatar: other?.avatar || "", lastMessage: m.text, lastTime: m.createdAt, unread });
+    conversations.push({ userId: otherId, name: other?.name || "Unknown", role: other?.role || "", avatar: other?.avatar || "", phone: other?.phone || "", email: other?.email || "", lastMessage: m.text, lastTime: m.createdAt, unread });
   }
   res.json(conversations);
 });

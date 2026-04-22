@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Admin, { ALL_PERMISSIONS } from "../models/admin.js";
+import Moderator from "../models/moderator.js";
 import User from "../models/user.js";
 import Owner from "../models/owner.js";
 import Flat from "../models/flat.js";
@@ -13,7 +14,7 @@ const router = express.Router();
 // ── Moderator Login (separate panel) ─────────────────
 router.post("/moderator-login", async (req, res) => {
   const { email, password } = req.body;
-  const mod = await Admin.findOne({ email, isSuperAdmin: false });
+  const mod = await Moderator.findOne({ email });
   if (!mod || !await bcrypt.compare(password, mod.password))
     return res.status(400).json({ message: "Invalid credentials" });
   if (mod.blocked) return res.status(403).json({ message: "Your account has been disabled. Contact the admin." });
@@ -46,13 +47,65 @@ router.put("/profile", adminAuth, async (req, res) => {
   res.json(safe);
 });
 
+// ── Admins (sub-admins) ──────────────────────────────
+router.get("/admins", adminAuth, async (req, res) => {
+  const admins = await Admin.find().select("-password").sort("-createdAt");
+  res.json(admins);
+});
+
+router.post("/admins", adminAuth, async (req, res) => {
+  if (!req.admin.isSuperAdmin) return res.status(403).json({ message: "Only Super Admin can create new admins" });
+  const { name, email, password } = req.body;
+  const exists = await Admin.findOne({ email });
+  if (exists) return res.status(400).json({ message: "Email already in use" });
+  const hashed = await bcrypt.hash(password, 10);
+  const admin = await Admin.create({ name, email, password: hashed, isSuperAdmin: false });
+  const { password: _, ...safe } = admin.toObject();
+  res.json(safe);
+});
+
+router.put("/admins/:id", adminAuth, async (req, res) => {
+  const { name, email, password } = req.body;
+  const update = {};
+  if (name) update.name = name;
+  if (email) {
+    const exists = await Admin.findOne({ email, _id: { $ne: req.params.id } });
+    if (exists) return res.status(400).json({ message: "Email already in use" });
+    update.email = email;
+  }
+  if (password) update.password = await bcrypt.hash(password, 10);
+  const updated = await Admin.findByIdAndUpdate(req.params.id, update, { new: true }).select("-password");
+  if (!updated) return res.status(404).json({ message: "Admin not found" });
+  res.json(updated);
+});
+
+router.patch("/admins/:id/toggle", adminAuth, async (req, res) => {
+  if (!req.admin.isSuperAdmin) return res.status(403).json({ message: "Only Super Admin can disable admins" });
+  const target = await Admin.findById(req.params.id);
+  if (!target) return res.status(404).json({ message: "Admin not found" });
+  if (target._id.toString() === req.admin.id) return res.status(400).json({ message: "Cannot disable your own account" });
+  target.blocked = !target.blocked;
+  await target.save();
+  const { password: _, ...safe } = target.toObject();
+  res.json(safe);
+});
+
+router.delete("/admins/:id", adminAuth, async (req, res) => {
+  if (!req.admin.isSuperAdmin) return res.status(403).json({ message: "Only Super Admin can delete admins" });
+  const target = await Admin.findById(req.params.id);
+  if (!target) return res.status(404).json({ message: "Admin not found" });
+  if (target._id.toString() === req.admin.id) return res.status(400).json({ message: "Cannot delete your own account" });
+  await Admin.findByIdAndDelete(req.params.id);
+  res.json({ message: "Admin deleted" });
+});
+
 // ── Setup ─────────────────────────────────────────────
 router.post("/setup", async (req, res) => {
   const exists = await Admin.findOne({});
   if (exists) return res.status(400).json({ message: "Admin already exists" });
   const { name, email, password } = req.body;
   const hashed = await bcrypt.hash(password, 10);
-  const admin = await Admin.create({ name, email, password: hashed, isSuperAdmin: true, permissions: ALL_PERMISSIONS });
+  const admin = await Admin.create({ name, email, password: hashed, isSuperAdmin: true });
   res.json({ message: "Super admin created", admin });
 });
 
@@ -62,17 +115,13 @@ router.post("/login", async (req, res) => {
   const admin = await Admin.findOne({ email });
   if (!admin || !await bcrypt.compare(password, admin.password))
     return res.status(400).json({ message: "Invalid credentials" });
-  // Patch old admin accounts missing isSuperAdmin/permissions
-  if (!admin.isSuperAdmin && !admin.permissions?.length) {
-    admin.isSuperAdmin = true;
-    admin.permissions = ALL_PERMISSIONS;
-    await admin.save();
-  }
+  if (admin.blocked) return res.status(403).json({ message: "Your account has been disabled. Contact the Super Admin." });
+  const isSuperAdmin = admin.isSuperAdmin !== false; // default true for existing admins
   const token = jwt.sign(
-    { id: admin._id, role: "admin", name: admin.name, email: admin.email, isSuperAdmin: admin.isSuperAdmin, permissions: admin.permissions },
+    { id: admin._id, role: "admin", name: admin.name, email: admin.email, isSuperAdmin, permissions: ALL_PERMISSIONS },
     process.env.JWT_SECRET
   );
-  res.json({ token, admin: { id: admin._id, name: admin.name, email: admin.email, isSuperAdmin: admin.isSuperAdmin, permissions: admin.permissions } });
+  res.json({ token, admin: { id: admin._id, name: admin.name, email: admin.email, isSuperAdmin, permissions: ALL_PERMISSIONS } });
 });
 
 // ── Stats ─────────────────────────────────────────────
@@ -93,16 +142,16 @@ router.get("/stats", adminAuth, async (req, res) => {
 
 // ── Moderators ────────────────────────────────────────
 router.get("/moderators", adminAuth, async (req, res) => {
-  const mods = await Admin.find({ isSuperAdmin: false }).select("-password").sort("-createdAt");
+  const mods = await Moderator.find().select("-password").sort("-createdAt");
   res.json(mods);
 });
 
 router.post("/moderators", adminAuth, async (req, res) => {
   const { name, email, password, permissions } = req.body;
-  const exists = await Admin.findOne({ email });
+  const exists = await Moderator.findOne({ email });
   if (exists) return res.status(400).json({ message: "Email already in use" });
   const hashed = await bcrypt.hash(password, 10);
-  const mod = await Admin.create({ name, email, password: hashed, isSuperAdmin: false, permissions: permissions || [] });
+  const mod = await Moderator.create({ name, email, password: hashed, permissions: permissions || [] });
   const { password: _, ...safe } = mod.toObject();
   res.json(safe);
 });
@@ -112,21 +161,19 @@ router.put("/moderators/:id", adminAuth, async (req, res) => {
   const update = {};
   if (name) update.name = name;
   if (email) {
-    const exists = await Admin.findOne({ email, _id: { $ne: req.params.id } });
+    const exists = await Moderator.findOne({ email, _id: { $ne: req.params.id } });
     if (exists) return res.status(400).json({ message: "Email already in use" });
     update.email = email;
   }
-  if (password) {
-    update.password = await bcrypt.hash(password, 10);
-  }
+  if (password) update.password = await bcrypt.hash(password, 10);
   if (permissions !== undefined) update.permissions = permissions;
-  const mod = await Admin.findByIdAndUpdate(req.params.id, update, { new: true }).select("-password");
+  const mod = await Moderator.findByIdAndUpdate(req.params.id, update, { new: true }).select("-password");
   if (!mod) return res.status(404).json({ message: "Moderator not found" });
   res.json(mod);
 });
 
 router.patch("/moderators/:id/toggle", adminAuth, async (req, res) => {
-  const mod = await Admin.findById(req.params.id);
+  const mod = await Moderator.findById(req.params.id);
   if (!mod) return res.status(404).json({ message: "Moderator not found" });
   mod.blocked = !mod.blocked;
   await mod.save();
@@ -135,7 +182,7 @@ router.patch("/moderators/:id/toggle", adminAuth, async (req, res) => {
 });
 
 router.delete("/moderators/:id", adminAuth, async (req, res) => {
-  await Admin.findByIdAndDelete(req.params.id);
+  await Moderator.findByIdAndDelete(req.params.id);
   res.json({ message: "Moderator deleted" });
 });
 
@@ -211,7 +258,7 @@ router.delete("/flats/:id", adminAuth, async (req, res) => {
 // ── Bookings ──────────────────────────────────────────
 router.get("/bookings", adminAuth, async (req, res) => {
   const bookings = await Booking.find()
-    .populate("flat_id", "location type price owner_id")
+    .populate("flat_id", "location state district city locality country pincode landmark houseNo type price roomWidth roomBreadth description images image rented visible owner_id")
     .populate("tenant_id", "name email")
     .sort("-createdAt");
 

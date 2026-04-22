@@ -16,7 +16,6 @@ const adminSchema = new mongoose.Schema({
   password: String,
   role: { type: String, default: "admin" },
   isSuperAdmin: { type: Boolean, default: false },
-  permissions: { type: [String], default: [] },
   blocked: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
