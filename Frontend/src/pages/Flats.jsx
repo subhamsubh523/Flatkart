@@ -123,7 +123,6 @@ export default function Flats() {
   const fetchFlats = useCallback(async () => {
     const { state, district, city, locality, pincode } = loc;
     const hasSearch = state || district || city || locality || pincode;
-    if (isTenant && !hasSearch) { setAllFlats([]); setLoading(false); return; }
     setLoading((prev) => prev || allFlats.length === 0);
     try {
       const p = new URLSearchParams();

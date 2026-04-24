@@ -47,7 +47,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("send_message", ({ receiver_id, message }) => {
-    const msg = { ...message, sender_id: message.sender_id?.toString(), receiver_id: message.receiver_id?.toString() };
+    const msg = {
+      ...message,
+      sender_id: message.sender_id?.toString(),
+      receiver_id: message.receiver_id?.toString(),
+    };
     io.to(receiver_id).emit("receive_message", msg);
     io.to(receiver_id).emit("new_conversation");
     io.to(msg.sender_id).emit("receive_message", msg);
@@ -74,4 +78,4 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`https://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
