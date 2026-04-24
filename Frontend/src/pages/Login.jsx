@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import Spinner from "../components/Spinner";
 import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle, FiSearch, FiCalendar, FiMessageSquare, FiStar, FiList, FiBarChart2, FiCheckSquare } from "react-icons/fi";
+import { RiShieldKeyholeLine } from "react-icons/ri";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "", role: "tenant" });
@@ -154,6 +155,23 @@ export default function Login() {
           </div>
 
           <Link to="/register" style={styles.registerBtn}>Sign Up</Link>
+
+          <div style={styles.dividerRow}>
+            <span style={styles.dividerLine} />
+            <span style={styles.dividerText}>admin access</span>
+            <span style={styles.dividerLine} />
+          </div>
+
+          <button
+            type="button"
+            style={styles.adminBtn}
+            onClick={() => navigate("/admin")}
+            onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+            onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+          >
+            <RiShieldKeyholeLine size={18} style={{ flexShrink: 0 }} />
+            Admin Control Center
+          </button>
         </div>
       </div>
     </div>
@@ -197,4 +215,5 @@ const styles = {
   dividerLine: { flex: 1, height: "1px", background: "#e0e0e0" },
   dividerText: { color: "#aaa", fontSize: "0.82rem", fontWeight: "500" },
   registerBtn: { display: "block", textAlign: "center", padding: "13px", background: "linear-gradient(135deg, #2c3e50, #1a252f)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "1rem", fontWeight: "700", letterSpacing: "0.3px", textDecoration: "none" },
+  adminBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", padding: "13px", background: "linear-gradient(135deg, #6c3fc9, #4b2a8a)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "1rem", fontWeight: "700", letterSpacing: "0.3px", boxShadow: "0 4px 14px rgba(108,63,201,0.35)", transition: "transform 0.18s ease, box-shadow 0.18s ease" },
 };
