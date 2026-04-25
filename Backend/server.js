@@ -38,12 +38,14 @@ const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
   socket.on("join", (userId) => {
-    socket.join(userId);
-    socket.userId = userId;
-    if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
-    onlineUsers.get(userId).add(socket.id);
+    const userIdStr = userId?.toString();
+    socket.join(userIdStr);
+    socket.userId = userIdStr;
+    if (!onlineUsers.has(userIdStr)) onlineUsers.set(userIdStr, new Set());
+    onlineUsers.get(userIdStr).add(socket.id);
     // Broadcast to everyone that this user is online
-    io.emit("user_online", userId);
+    io.emit("user_online", userIdStr);
+    console.log(`User ${userIdStr} joined. Online users:`, [...onlineUsers.keys()]);
   });
 
   socket.on("send_message", ({ receiver_id, message }) => {
@@ -52,8 +54,8 @@ io.on("connection", (socket) => {
       sender_id: message.sender_id?.toString(),
       receiver_id: message.receiver_id?.toString(),
     };
-    io.to(receiver_id).emit("receive_message", msg);
-    io.to(receiver_id).emit("new_conversation");
+    io.to(receiver_id?.toString()).emit("receive_message", msg);
+    io.to(receiver_id?.toString()).emit("new_conversation");
     io.to(msg.sender_id).emit("receive_message", msg);
   });
 
@@ -67,6 +69,7 @@ io.on("connection", (socket) => {
         onlineUsers.delete(userId);
         // Broadcast to everyone that this user is offline
         io.emit("user_offline", userId);
+        console.log(`User ${userId} disconnected. Online users:`, [...onlineUsers.keys()]);
       }
     }
   });

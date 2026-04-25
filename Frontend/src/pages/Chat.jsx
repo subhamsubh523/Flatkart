@@ -79,14 +79,25 @@ export default function Chat() {
 
   useEffect(() => {
     if (!user?.id) return;
-    socket.emit("join", user.id);
+    const userIdStr = user.id.toString();
+    socket.emit("join", userIdStr);
     socket.emit("get_online_users");
+    console.log("Joined chat with userId:", userIdStr);
   }, [user]);
 
   useEffect(() => {
-    const onOnline = (uid) => setOnlineUsers((prev) => new Set([...prev, uid]));
-    const onOffline = (uid) => setOnlineUsers((prev) => { const s = new Set(prev); s.delete(uid); return s; });
-    const onOnlineList = (list) => setOnlineUsers(new Set(list));
+    const onOnline = (uid) => {
+      console.log("User came online:", uid);
+      setOnlineUsers((prev) => new Set([...prev, uid?.toString()]));
+    };
+    const onOffline = (uid) => {
+      console.log("User went offline:", uid);
+      setOnlineUsers((prev) => { const s = new Set(prev); s.delete(uid?.toString()); return s; });
+    };
+    const onOnlineList = (list) => {
+      console.log("Online users list:", list);
+      setOnlineUsers(new Set(list.map(id => id?.toString())));
+    };
     socket.on("user_online", onOnline);
     socket.on("user_offline", onOffline);
     socket.on("online_users", onOnlineList);
@@ -372,7 +383,7 @@ export default function Chat() {
                 <div key={c.userId} onClick={() => selectConv(c)} style={{ ...styles.convItem, ...(isActive ? styles.convItemActive : {}) }}>
                   <div style={styles.convAvatarWrap}>
                     <Avatar avatar={c.avatar} name={c.name} style={styles.convAvatar} bgColor="#1abc9c" />
-                    {onlineUsers.has(c.userId) && <span style={styles.onlineDot} />}
+                    {onlineUsers.has(c.userId?.toString()) && <span style={styles.onlineDot} />}
                   </div>
                   <div style={styles.convInfo}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -409,8 +420,8 @@ export default function Chat() {
                 <Avatar avatar={activeAvatar} name={activeName} style={styles.chatHeaderAvatar} bgColor="#1abc9c" />
                 <div>
                   <p style={styles.chatHeaderName}>{activeName || "..."}</p>
-                  <p style={{ ...styles.chatHeaderStatus, color: onlineUsers.has(activeId) ? "#2ecc71" : "#e74c3c" }}>
-                    {onlineUsers.has(activeId) ? "● Online" : "● Offline"}
+                  <p style={{ ...styles.chatHeaderStatus, color: onlineUsers.has(activeId?.toString()) ? "#2ecc71" : "#e74c3c" }}>
+                    {onlineUsers.has(activeId?.toString()) ? "● Online" : "● Offline"}
                   </p>
                 </div>
               </div>
