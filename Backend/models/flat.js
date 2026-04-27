@@ -11,6 +11,7 @@ const flatSchema = new mongoose.Schema({
   pincode: String,
   landmark: String,
   houseNo: String,
+  flatName: String,
   roomWidth: String,
   roomBreadth: String,
   comments: String,
@@ -19,12 +20,13 @@ const flatSchema = new mongoose.Schema({
   description: String,
   image: String,
   images: [String],
+  imageLabels: [String],
   imagePublicIds: [String],
   sold: { type: Boolean, default: false },
   rented: { type: Boolean, default: false },
   visible: { type: Boolean, default: true },
   views: { type: Number, default: 0 },
   viewedBy: [{ type: String }],
-});
+}, { timestamps: true });
 
 export default mongoose.model("Flat", flatSchema);

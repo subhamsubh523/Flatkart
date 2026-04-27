@@ -90,7 +90,7 @@ export default function AdminFlats() {
         </div>
         <input style={cs.search} placeholder="Search by location, type, city..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
-      <AdminTable columns={columns} data={filtered} loading={loading} emptyMsg="No flats found." />
+      <AdminTable columns={columns} data={filtered} loading={loading} emptyMsg="No flats found." emptyIcon={<FiHome size={56} color="#bdc3c7" style={{ marginBottom: 10 }} />} />
 
       {/* Detail Modal */}
       {selected && (

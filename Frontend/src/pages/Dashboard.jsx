@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../api";
 import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/Spinner";
 import ImageSlider from "../components/ImageSlider";
 import Cropper from "react-easy-crop";
-import { FiStar, FiMapPin, FiMap, FiGlobe, FiMail, FiHome, FiTag, FiDollarSign, FiFileText, FiImage, FiCamera, FiEye, FiEyeOff, FiEdit2, FiTrash2, FiCheck, FiX, FiAlertTriangle, FiChevronLeft, FiChevronRight, FiUnlock, FiSave, FiPlusCircle, FiList, FiBookmark, FiCheckCircle, FiAlertCircle, FiCrop } from "react-icons/fi";
+import { FiStar, FiMapPin, FiMap, FiGlobe, FiMail, FiHome, FiTag, FiDollarSign, FiFileText, FiImage, FiCamera, FiEye, FiEyeOff, FiEdit2, FiTrash2, FiCheck, FiX, FiAlertTriangle, FiChevronLeft, FiChevronRight, FiUnlock, FiSave, FiPlusCircle, FiList, FiBookmark, FiCheckCircle, FiAlertCircle, FiCrop, FiBarChart2, FiClock, FiXCircle, FiTrendingUp, FiInbox, FiCalendar } from "react-icons/fi";
 
-const TABS = ["Overview", "My Flats", "Booking Requests", "Sold Flats", "Customer Reviews"];
+const TABS = [
+  { label: "Overview",         icon: <FiBarChart2 size={15} /> },
+  { label: "My Flats",         icon: <FiHome size={15} /> },
+  { label: "Booking Requests", icon: <FiList size={15} /> },
+  { label: "Sold Flats",       icon: <FiTag size={15} /> },
+  { label: "Customer Reviews", icon: <FiStar size={15} /> },
+];
 const statusColor = { pending: "#f39c12", approved: "#01fc6a", rejected: "#e74c3c", cancelled: "#7f8c8d" };
 
 function FlatReviews({ flatId }) {
@@ -61,13 +68,19 @@ const revStyles = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const location = useLocation();
   const [tab, setTab] = useState(0);
+
+  useEffect(() => {
+    if (location.state?.tab !== undefined) setTab(location.state.tab);
+  }, []);
   const [flats, setFlats] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [reviews, setReviews] = useState([]);
-  const [form, setForm] = useState({ state: "", district: "", city: "", locality: "", country: "India", pincode: "", landmark: "", houseNo: "", roomWidth: "", roomBreadth: "", price: "", type: "", customType: "", description: "", comments: "" });
+  const [form, setForm] = useState({ state: "", district: "", city: "", locality: "", country: "India", pincode: "", landmark: "", houseNo: "", flatName: "", roomWidth: "", roomBreadth: "", price: "", type: "", customType: "", description: "", comments: "" });
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
+  const [imageLabels, setImageLabels] = useState([]);
   const [editFlat, setEditFlat] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editMsg, setEditMsg] = useState("");
@@ -106,7 +119,7 @@ export default function Dashboard() {
 
   const openCropModal = (index) => {
     const src = previews[index];
-    setCropModal({ index, src });
+    setCropModal({ index, src, addedCount: 0 });
     setCrop({ x: 0, y: 0 });
     setZoom(1);
   };
@@ -127,10 +140,10 @@ export default function Dashboard() {
     const startIndex = images.length;
     setImages((prev) => [...prev, ...files]);
     setPreviews((prev) => [...prev, ...newPreviews]);
-    // Open crop modal for the first new image
-    setCropModal({ index: startIndex, src: newPreviews[0] });
+    setCropModal({ index: startIndex, src: newPreviews[0], addedCount: files.length, startIndex });
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    e.target.value = "";
   };
 
   const handleDrop = (e) => {
@@ -142,8 +155,7 @@ export default function Dashboard() {
     const startIndex = images.length;
     setImages((prev) => [...prev, ...files]);
     setPreviews((prev) => [...prev, ...newPreviews]);
-    // Open crop modal for the first new image
-    setCropModal({ index: startIndex, src: newPreviews[0] });
+    setCropModal({ index: startIndex, src: newPreviews[0], addedCount: files.length, startIndex });
     setCrop({ x: 0, y: 0 });
     setZoom(1);
   };
@@ -151,6 +163,7 @@ export default function Dashboard() {
   const removeImage = (i) => {
     setImages((prev) => prev.filter((_, idx) => idx !== i));
     setPreviews((prev) => prev.filter((_, idx) => idx !== i));
+    setImageLabels((prev) => prev.filter((_, idx) => idx !== i));
   };
 
   const handleSubmit = async (e) => {
@@ -159,7 +172,7 @@ export default function Dashboard() {
     if (Number(form.price) < 1000) { showToast("Minimum price is ₹1,000.", "error"); return; }
     setLoading(true);
     const formData = new FormData();
-    const { state, district, city, locality, country, pincode, landmark, houseNo, price, customType, ...rest } = form;
+    const { state, district, city, locality, country, pincode, landmark, houseNo, flatName, price, customType, ...rest } = form;
     const finalType = rest.type === "Others" ? customType : rest.type;
     formData.append("location", [houseNo, locality, city, district, state].filter(Boolean).join(", "));
     formData.append("state", state);
@@ -171,17 +184,20 @@ export default function Dashboard() {
     if (pincode) formData.append("pincode", pincode);
     if (landmark) formData.append("landmark", landmark);
     if (houseNo) formData.append("houseNo", houseNo);
+    if (flatName) formData.append("flatName", flatName);
     Object.entries({ ...rest, type: finalType }).forEach(([k, v]) => formData.append(k, v));
     images.forEach((img) => formData.append("images", img));
+    formData.append("imageLabels", JSON.stringify(imageLabels));
     try {
       const { data } = await API.post("/flats", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setFlats((prev) => [...prev, data]);
       showToast("Flat listed successfully!");
-      setForm({ state: "", district: "", city: "", locality: "", country: "India", pincode: "", landmark: "", houseNo: "", roomWidth: "", roomBreadth: "", price: "", type: "", customType: "", description: "", comments: "" });
+      setForm({ state: "", district: "", city: "", locality: "", country: "India", pincode: "", landmark: "", houseNo: "", flatName: "", roomWidth: "", roomBreadth: "", price: "", type: "", customType: "", description: "", comments: "" });
       setImages([]);
       setPreviews([]);
+      setImageLabels([]);
       setTab(1);
     } catch (err) {
       showToast(err?.response?.data?.message || "Failed to list flat.", "error");
@@ -189,6 +205,18 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  const [editExistingImages, setEditExistingImages] = useState([]);
+  const [editExistingFiles, setEditExistingFiles] = useState([]);
+  const [editImageLabels, setEditImageLabels] = useState([]);
+  const [editNewImages, setEditNewImages] = useState([]);
+  const [editNewPreviews, setEditNewPreviews] = useState([]);
+  const [editSliderIdx, setEditSliderIdx] = useState(0);
+  const [editDragging, setEditDragging] = useState(false);
+  const [editCropModal, setEditCropModal] = useState(null);
+  const [editCrop, setEditCrop] = useState({ x: 0, y: 0 });
+  const [editZoom, setEditZoom] = useState(1);
+  const [editCroppedArea, setEditCroppedArea] = useState(null);
 
   const openEdit = (flat) => {
     setEditFlat(flat);
@@ -201,6 +229,7 @@ export default function Dashboard() {
       pincode: flat.pincode || "",
       landmark: flat.landmark || "",
       houseNo: flat.houseNo || "",
+      flatName: flat.flatName || "",
       roomWidth: flat.roomWidth || "",
       roomBreadth: flat.roomBreadth || "",
       price: flat.price ? String(flat.price) : "",
@@ -215,6 +244,9 @@ export default function Dashboard() {
     );
     setEditExistingImages(existingImgs);
     setEditExistingFiles([]);
+    const existingLabels = flat.imageLabels || [];
+    const paddedLabels = existingImgs.map((_, i) => existingLabels[i] || "");
+    setEditImageLabels(paddedLabels);
     setEditNewImages([]);
     setEditNewPreviews([]);
     setEditSliderIdx(0);
@@ -228,7 +260,7 @@ export default function Dashboard() {
     setEditLoading(true);
     setEditMsg("");
     const formData = new FormData();
-    const { state, district, city, locality, country, pincode, landmark, houseNo, price, customType, ...rest } = editForm;
+    const { state, district, city, locality, country, pincode, landmark, houseNo, flatName, price, customType, ...rest } = editForm;
     const finalType = rest.type === "Others" ? customType : rest.type;
     formData.append("location", [houseNo, locality, city, district, state].filter(Boolean).join(", "));
     formData.append("state", state);
@@ -240,6 +272,7 @@ export default function Dashboard() {
     if (pincode) formData.append("pincode", pincode);
     if (landmark) formData.append("landmark", landmark);
     if (houseNo) formData.append("houseNo", houseNo);
+    if (flatName) formData.append("flatName", flatName);
     Object.entries({ ...rest, type: finalType }).forEach(([k, v]) => formData.append(k, v));
     // Send retained existing image filenames (or cropped replacements)
     editExistingImages.forEach((url, i) => {
@@ -251,6 +284,7 @@ export default function Dashboard() {
       }
     });
     editNewImages.forEach((img) => formData.append("images", img));
+    formData.append("imageLabels", JSON.stringify(editImageLabels));
     try {
       const { data } = await API.put(`/flats/${editFlat._id}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       setFlats((prev) => prev.map((f) => (f._id === data._id ? data : f)));
@@ -263,16 +297,6 @@ export default function Dashboard() {
     }
   };
 
-  const [editExistingImages, setEditExistingImages] = useState([]);
-  const [editExistingFiles, setEditExistingFiles] = useState([]);
-  const [editNewImages, setEditNewImages] = useState([]);
-  const [editNewPreviews, setEditNewPreviews] = useState([]);
-  const [editSliderIdx, setEditSliderIdx] = useState(0);
-  const [editDragging, setEditDragging] = useState(false);
-  const [editCropModal, setEditCropModal] = useState(null);
-  const [editCrop, setEditCrop] = useState({ x: 0, y: 0 });
-  const [editZoom, setEditZoom] = useState(1);
-  const [editCroppedArea, setEditCroppedArea] = useState(null);
   const onEditCropComplete = useCallback((_, area) => setEditCroppedArea(area), []);
 
   const openEditCropModal = (kind, index, src) => {
@@ -355,7 +379,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} className="owner-dashboard">
       {/* Sidebar */}
       <aside style={styles.sidebar}>
         <div style={styles.profile}>
@@ -385,7 +409,9 @@ export default function Dashboard() {
           {TABS.map((t, i) => (
             <button key={i} onClick={() => setTab(i)}
               style={{ ...styles.navBtn, ...(tab === i ? styles.navBtnActive : {}) }}>
-              {t}
+              <span style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+                {t.icon}{t.label}
+              </span>
               {i === 2 && pendingCount > 0 && (
                 <span style={styles.badge}>{pendingCount}</span>
               )}
@@ -405,26 +431,26 @@ export default function Dashboard() {
           <div>
             <div style={styles.mainHeader}>
               <div>
-                <h2 style={styles.title}>📊 Dashboard Overview</h2>
+                <h2 style={{ ...styles.title, display: "flex", alignItems: "center", gap: "8px" }}><FiBarChart2 size={22} color="#2c3e50" /> Dashboard</h2>
                 <p style={{ margin: "4px 0 0", color: "#888", fontSize: "0.9rem" }}>Your listing summary at a glance</p>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px" }}>
               {[
-                { label: "Total Listings",    value: flats.length,                                                icon: "🏠", color: "#3498db" },
-                { label: "Visible Listings",  value: flats.filter((f) => f.visible !== false).length,            icon: "👁️", color: "#1abc9c" },
-                { label: "Hidden Listings",   value: flats.filter((f) => f.visible === false).length,            icon: "🙈", color: "#636e72" },
-                { label: "Rented / Sold",     value: flats.filter((f) => f.rented).length,                       icon: "🏷️", color: "#e67e22" },
-                { label: "Available",         value: flats.filter((f) => !f.rented).length,                      icon: "✅", color: "#27ae60" },
-                { label: "Total Bookings",    value: bookings.length,                                            icon: "📋", color: "#2c3e50" },
-                { label: "Pending Bookings",  value: bookings.filter((b) => b.status === "pending").length,      icon: "⏳", color: "#f39c12" },
-                { label: "Approved Bookings", value: bookings.filter((b) => b.status === "approved").length,     icon: "✅", color: "#27ae60" },
-                { label: "Rejected Bookings", value: bookings.filter((b) => b.status === "rejected").length,     icon: "❌", color: "#e74c3c" },
-                { label: "Total Reviews",     value: reviews.length,                                             icon: "⭐", color: "#f39c12" },
-                { label: "Total Views",       value: flats.reduce((s, f) => s + (f.views || 0), 0),              icon: "👀", color: "#9b59b6" },
+                { label: "Total Listings",    value: flats.length,                                                icon: <FiHome size={22} />,         color: "#3498db" },
+                { label: "Visible Listings",  value: flats.filter((f) => f.visible !== false).length,            icon: <FiEye size={22} />,          color: "#1abc9c" },
+                { label: "Hidden Listings",   value: flats.filter((f) => f.visible === false).length,            icon: <FiEyeOff size={22} />,       color: "#636e72" },
+                { label: "Rented / Sold",     value: flats.filter((f) => f.rented).length,                       icon: <FiTag size={22} />,          color: "#e67e22" },
+                { label: "Available",         value: flats.filter((f) => !f.rented).length,                      icon: <FiCheckCircle size={22} />,  color: "#27ae60" },
+                { label: "Total Bookings",    value: bookings.length,                                            icon: <FiList size={22} />,         color: "#2c3e50" },
+                { label: "Pending Bookings",  value: bookings.filter((b) => b.status === "pending").length,      icon: <FiClock size={22} />,        color: "#f39c12" },
+                { label: "Approved Bookings", value: bookings.filter((b) => b.status === "approved").length,     icon: <FiCheckCircle size={22} />,  color: "#27ae60" },
+                { label: "Rejected Bookings", value: bookings.filter((b) => b.status === "rejected").length,     icon: <FiXCircle size={22} />,      color: "#e74c3c" },
+                { label: "Total Reviews",     value: reviews.length,                                             icon: <FiStar size={22} />,         color: "#f39c12" },
+                { label: "Total Views",       value: flats.reduce((s, f) => s + (f.views || 0), 0),              icon: <FiTrendingUp size={22} />,   color: "#9b59b6" },
               ].map((c, i) => (
-                <div key={i} style={{ background: "#fff", borderRadius: "12px", padding: "20px", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", display: "flex", alignItems: "center", gap: "16px", borderTop: `4px solid ${c.color}` }}>
-                  <div style={{ width: "52px", height: "52px", borderRadius: "12px", background: `${c.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.5rem" }}>{c.icon}</div>
+                <div key={i} className="overview-card" style={{ background: "#fff", borderRadius: "12px", padding: "20px", display: "flex", alignItems: "center", gap: "16px", borderTop: `4px solid ${c.color}` }}>
+                  <div style={{ width: "52px", height: "52px", borderRadius: "12px", background: `${c.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: c.color }}>{c.icon}</div>
                   <div>
                     <p style={{ margin: 0, fontSize: "1.8rem", fontWeight: "700", color: "#2c3e50" }}>{c.value}</p>
                     <p style={{ margin: 0, fontSize: "0.8rem", color: "#888", fontWeight: "500" }}>{c.label}</p>
@@ -440,30 +466,35 @@ export default function Dashboard() {
           <div>
             <div style={styles.mainHeader}>
               <h2 style={styles.title}>My Listings</h2>
+              <button style={styles.addBtn} onClick={() => setTab(5)}>
+                <FiPlusCircle size={15} style={{ marginRight: 6 }} />Add New Flat
+              </button>
             </div>
             {flats.length === 0 ? (
               <div style={styles.empty}>
                 <p>No flats listed yet.</p>
               </div>
             ) : (
-              <div style={styles.grid}>
+              <div style={styles.grid} className="flats-grid">
                 {flats.map((flat) => (
                   <div key={flat._id} style={{ ...styles.flatCard, ...(flat.visible === false ? styles.hiddenCard : {}) }}>
                     <div style={{ position: "relative" }}>
-                      <ImageSlider images={flat.images} image={flat.image} height="160px" noImgSize="2rem" onImageClick={openLightbox} />
-                      {flat.rented && <div style={styles.soldBanner}>SOLD</div>}
-                      {flat.visible === false ? <div style={styles.hiddenBanner}>Hidden</div> : <div style={styles.visibleBanner}>Visible</div>}
+                      <ImageSlider images={flat.images} image={flat.image} height="160px" noImgSize="2rem" onImageClick={openLightbox} labels={flat.imageLabels} />
+
                       {flat.visible === false && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", pointerEvents: "none" }} />}
                     </div>
                     <div style={styles.flatBody}>
                       <h3 style={styles.flatLocation}>{flat.location}</h3>
                       <p style={styles.flatMeta}><span style={{ fontSize: "0.72rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginRight: 4 }}>Type</span><span style={{ fontWeight: "600", color: "#555" }}>{flat.type}</span></p>
                       <p style={styles.flatPrice}>₹{flat.price}<span style={styles.perMonth}>/month</span></p>
+                      {flat.roomWidth && flat.roomBreadth && <p style={styles.flatMeta}><span style={{ fontSize: "0.72rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginRight: 4 }}>Size</span><span style={{ fontWeight: "600", color: "#555" }}>{flat.roomWidth} × {flat.roomBreadth} ft</span></p>}
+                      {flat.flatName && <p style={styles.flatMeta}><span style={{ fontSize: "0.72rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginRight: 4 }}>Flat Name</span><span style={{ fontWeight: "600", color: "#555" }}>{flat.flatName}</span></p>}
                       {flat.landmark && <p style={styles.flatMeta}><span style={{ fontSize: "0.72rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginRight: 4 }}>Landmark</span><span style={{ fontWeight: "600", color: "#555" }}>{flat.landmark}</span></p>}
                       <p style={styles.flatDesc}>{flat.description}</p>
                       {flat.comments && <p style={{ fontSize: "0.8rem", color: "#888", margin: "0 0 8px", background: "#f8f9fa", borderRadius: "6px", padding: "6px 10px", borderLeft: "3px solid #1abc9c" }}>{flat.comments}</p>}
-                      <div style={styles.viewCount}><FiEye size={13} style={{ marginRight: 4 }} />{flat.views || 0} view{flat.views !== 1 ? "s" : ""}</div>
-                      <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "nowrap", alignItems: "center" }}>
+                      <div style={styles.viewCount}><FiEye size={13} style={{ marginRight: 4 }} />{flat.views || 0} View{flat.views !== 1 ? "s" : ""}</div>
+                      {flat._id && <div style={{ fontSize: "0.75rem", color: "#7f8c8d", fontWeight: "600", marginBottom: "8px", display: "flex", alignItems: "center" }}><FiCalendar size={12} style={{ marginRight: 4 }} />Listed on {new Date(parseInt(flat._id.substring(0, 8), 16) * 1000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>}
+                      <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap", alignItems: "center" }}>
                           <div
                             style={styles.switchWrap}
                             onClick={(e) => { e.stopPropagation(); API.patch(`/flats/${flat._id}/visibility`).then(({ data }) => { setFlats((prev) => prev.map((f) => f._id === data._id ? data : f)); }); }}
@@ -635,7 +666,7 @@ export default function Dashboard() {
                         <button
                           key={t} type="button"
                           style={{ ...styles.typeBtn, ...(form.type === t ? styles.typeBtnActive : {}) }}
-                          onClick={() => setForm({ ...form, type: t, customType: "" })}>
+                          onClick={() => setForm({ ...form, type: form.type === t ? "" : t, customType: "" })}>
                           {t}
                         </button>
                       ))}
@@ -692,6 +723,13 @@ export default function Dashboard() {
                     onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 </div>
 
+                <div style={styles.formGroup}>
+                  <label style={styles.label}><FiHome size={13} style={{ marginRight: 4 }} />Flat / Apartment Name <span style={styles.opt}>*</span></label>
+                  <input style={styles.input} placeholder="Resident Name"
+                    value={form.flatName}
+                    onChange={(e) => setForm({ ...form, flatName: e.target.value })} />
+                </div>
+
                 {/* Section: Image */}
                 <div style={{ ...styles.sectionHeader, marginTop: "8px" }}>
                   <FiImage size={16} color="#2c3e50" />
@@ -717,10 +755,20 @@ export default function Dashboard() {
                 {previews.length > 0 && (
                   <div style={styles.previewGrid}>
                     {previews.map((src, i) => (
-                      <div key={i} style={styles.previewThumb}>
-                        <img src={src} alt={`preview-${i}`} style={styles.thumbImg} />
-                        <button type="button" style={styles.removeThumb} onClick={() => removeImage(i)}><FiX size={10} /></button>
-                        <button type="button" style={styles.editThumb} onClick={() => openCropModal(i)}><FiCrop size={10} /></button>
+                      <div key={i} style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
+                        <div style={styles.previewThumb}>
+                          <img src={src} alt={`preview-${i}`} style={styles.thumbImg} />
+                          <button type="button" style={styles.removeThumb} onClick={() => removeImage(i)}><FiX size={10} /></button>
+                          <button type="button" style={styles.editThumb} onClick={() => openCropModal(i)}><FiCrop size={10} /></button>
+                        </div>
+                        <input
+                          style={{ width: "90px", padding: "4px 8px", fontSize: "0.72rem", borderRadius: "6px", border: "1.5px solid #e0e0e0", outline: "none", textAlign: "center", background: "#f8f9fa", color: "#2c3e50", fontWeight: "600", transition: "border-color 0.2s", boxSizing: "border-box" }}
+                          placeholder="Label"
+                          value={imageLabels[i] || ""}
+                          onChange={(e) => setImageLabels((prev) => { const next = [...prev]; next[i] = e.target.value; return next; })}
+                          onFocus={(e) => e.target.style.borderColor = "#1abc9c"}
+                          onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                        />
                       </div>
                     ))}
                   </div>
@@ -762,11 +810,11 @@ export default function Dashboard() {
             </div>
             {flats.filter((f) => f.rented).length === 0 ? (
               <div style={styles.empty}>
-                <span style={{ fontSize: "3rem" }}>🏷️</span>
+                <span style={{ fontSize: "3rem" }}><FiTag size={48} color="#bdc3c7" /></span>
                 <p>No sold flats yet.</p>
               </div>
             ) : (
-              <div style={styles.grid}>
+              <div style={styles.grid} className="flats-grid">
                 {flats.filter((f) => f.rented).map((flat) => (
                   <div key={flat._id} style={styles.soldCard}>
                     <div style={styles.soldImgWrap}>
@@ -808,7 +856,7 @@ export default function Dashboard() {
             </div>
             {bookings.length === 0 ? (
               <div style={styles.empty}>
-                <span style={{ fontSize: "3rem" }}>📭</span>
+                <span style={{ fontSize: "3rem" }}><FiList size={48} color="#bdc3c7" /></span>
                 <p>No booking requests yet.</p>
               </div>
             ) : (
@@ -827,7 +875,12 @@ export default function Dashboard() {
                             <span style={styles.bookingMetaChip}><FiDollarSign size={11} style={{ marginRight: 3 }} />₹{b.flat_id?.price?.toLocaleString()}/mo</span>
                           </div>
                         </div>
-                        <span style={{ ...styles.bookingStatus, background: statusColor[b.status] }}>{b.status}</span>
+                        <span style={{ ...styles.bookingStatus, background: statusColor[b.status] }}>
+                          {b.status === "pending" && <><FiClock size={12} style={{ marginRight: 4, verticalAlign: "middle" }} />Pending</>}
+                          {b.status === "approved" && <><FiCheckCircle size={12} style={{ marginRight: 4, verticalAlign: "middle" }} />Approved</>}
+                          {b.status === "rejected" && <><FiXCircle size={12} style={{ marginRight: 4, verticalAlign: "middle" }} />Rejected</>}
+                          {b.status === "cancelled" && <><FiX size={12} style={{ marginRight: 4, verticalAlign: "middle" }} />Cancelled</>}
+                        </span>
                       </div>
                       <div style={styles.bookingTenantRow}>
                         <div style={styles.bookingTenantAvatar}>{b.tenant_id?.name?.[0]?.toUpperCase() || "T"}</div>
@@ -862,7 +915,7 @@ export default function Dashboard() {
       {/* Edit Modal */}
       {editFlat && (
         <div style={styles.overlay} onClick={() => setEditFlat(null)}>
-          <div style={{ ...styles.modal, maxWidth: "760px", padding: "32px" }} onClick={(e) => e.stopPropagation()}>
+          <div key={editFlat._id} style={{ ...styles.modal, maxWidth: "760px", padding: "32px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div style={{ textAlign: "center", width: "100%" }}>
                 <h2 style={styles.title}><FiEdit2 size={18} style={{ marginRight: 8 }} />Edit Flat Details</h2>
@@ -1001,6 +1054,13 @@ export default function Dashboard() {
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
               </div>
 
+              <div style={styles.formGroup}>
+                <label style={styles.label}><FiHome size={13} style={{ marginRight: 4 }} />Flat / Apartment Name <span style={styles.opt}>*</span></label>
+                <input style={styles.input} placeholder="Resident Name"
+                  value={editForm.flatName || ""}
+                  onChange={(e) => setEditForm({ ...editForm, flatName: e.target.value })} />
+              </div>
+
               {/* Section: Images */}
               <div style={{ ...styles.sectionHeader, marginTop: "8px" }}>
                 <FiImage size={16} color="#2c3e50" />
@@ -1038,9 +1098,19 @@ export default function Dashboard() {
                     {/* Thumbnail strip */}
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       {allSrcs.map((src, i) => (
-                        <div key={i} onClick={() => setEditSliderIdx(i)}
-                          style={{ width: "60px", height: "60px", borderRadius: "6px", overflow: "hidden", border: i === editSliderIdx ? "2px solid #1abc9c" : "2px solid #e0e0e0", cursor: "pointer", flexShrink: 0, background: "#f0f2f5" }}>
-                          <img src={src} alt={`thumb-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        <div key={i} style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
+                          <div onClick={() => setEditSliderIdx(i)}
+                            style={{ width: "60px", height: "60px", borderRadius: "6px", overflow: "hidden", border: i === editSliderIdx ? "2px solid #1abc9c" : "2px solid #e0e0e0", cursor: "pointer", flexShrink: 0, background: "#f0f2f5" }}>
+                            <img src={src} alt={`thumb-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                          </div>
+                          <input
+                            style={{ width: "60px", padding: "4px 6px", fontSize: "0.68rem", borderRadius: "6px", border: "1.5px solid #e0e0e0", outline: "none", textAlign: "center", background: "#f8f9fa", color: "#2c3e50", fontWeight: "600", transition: "border-color 0.2s", boxSizing: "border-box" }}
+                            placeholder="Label"
+                            value={editImageLabels[i] || ""}
+                            onChange={(e) => setEditImageLabels((prev) => { const next = [...prev]; next[i] = e.target.value; return next; })}
+                            onFocus={(e) => e.target.style.borderColor = "#1abc9c"}
+                            onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                          />
                         </div>
                       ))}
                     </div>
@@ -1189,11 +1259,25 @@ export default function Dashboard() {
 
       {/* Image Crop Modal */}
       {cropModal && (
-        <div style={styles.overlay} onClick={() => setCropModal(null)}>
+        <div style={styles.overlay} onClick={() => {
+          if (cropModal.addedCount > 0) {
+            setImages((prev) => prev.slice(0, cropModal.startIndex));
+            setPreviews((prev) => prev.slice(0, cropModal.startIndex));
+            setImageLabels((prev) => prev.slice(0, cropModal.startIndex));
+          }
+          setCropModal(null);
+        }}>
           <div style={{ ...styles.modal, maxWidth: "560px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}><FiCrop size={16} style={{ marginRight: 6 }} />Preview & Crop Image</h3>
-              <button style={styles.closeBtn} onClick={() => setCropModal(null)}><FiX size={14} /></button>
+              <button style={styles.closeBtn} onClick={() => {
+                if (cropModal.addedCount > 0) {
+                  setImages((prev) => prev.slice(0, cropModal.startIndex));
+                  setPreviews((prev) => prev.slice(0, cropModal.startIndex));
+                  setImageLabels((prev) => prev.slice(0, cropModal.startIndex));
+                }
+                setCropModal(null);
+              }}><FiX size={14} /></button>
             </div>
             <p style={{ margin: "0 0 12px", fontSize: "0.85rem", color: "#888" }}>Drag to reposition · Use slider to zoom · Click "Use as is" to skip cropping</p>
             <div style={{ position: "relative", width: "100%", height: "340px", background: "#111", borderRadius: "10px", overflow: "hidden" }}>
@@ -1279,20 +1363,20 @@ const styles = {
   main: { flex: 1, padding: "32px" },
   mainHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { margin: 0, fontSize: "1.4rem", color: "#2c3e50" },
-  addBtn: { padding: "10px 20px", background: "#2c3e50", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.95rem" },
+  addBtn: { padding: "10px 20px", background: "#2c3e50", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.95rem", display: "inline-flex", alignItems: "center" },
   empty: { textAlign: "center", padding: "60px 0", color: "#888", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" },
-  flatCard: { background: "#fff", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", position: "relative" },
+  flatCard: { background: "#fff", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", position: "relative", minWidth: 0 },
   flatImg: { width: "100%", height: "160px", objectFit: "cover" },
   noImg: { height: "160px", background: "#ecf0f1", display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa" },
-  flatBody: { padding: "14px" },
-  flatLocation: { margin: "0 0 4px", fontSize: "1rem" },
-  flatMeta: { color: "#888", fontSize: "0.85rem", margin: "2px 0" },
+  flatBody: { padding: "14px", minWidth: 0 },
+  flatLocation: { margin: "0 0 4px", fontSize: "1rem", wordBreak: "break-word", overflowWrap: "anywhere" },
+  flatMeta: { color: "#888", fontSize: "0.85rem", margin: "2px 0", wordBreak: "break-word", overflowWrap: "anywhere" },
   flatPrice: { fontSize: "1.1rem", fontWeight: "bold", color: "#2c3e50", margin: "6px 0" },
   perMonth: { fontSize: "0.8rem", fontWeight: "normal", color: "#888" },
-  flatDesc: { fontSize: "0.82rem", color: "#999", margin: "4px 0 10px", fontStyle: "italic", lineHeight: "1.5" },
-  viewCount: { fontSize: "0.8rem", color: "#1abc9c", fontWeight: "600", marginBottom: "10px" },
-  soldCard: { background: "#fff", borderRadius: "12px", overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)", border: "1px solid #eafaf1", position: "relative" },
+  flatDesc: { fontSize: "0.82rem", color: "#999", margin: "4px 0 10px", fontStyle: "italic", lineHeight: "1.5", wordBreak: "break-word", overflowWrap: "anywhere" },
+  viewCount: { fontSize: "0.8rem", color: "#2c3e50", fontWeight: "700", marginBottom: "10px" },
+  soldCard: { background: "#fff", borderRadius: "12px", overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)", border: "1px solid #eafaf1", position: "relative", minWidth: 0 },
   soldImgWrap: { position: "relative" },
   soldCornerBadge: { position: "absolute", top: "10px", left: "10px", background: "#27ae60", color: "#fff", padding: "4px 12px", borderRadius: "20px", fontWeight: "700", fontSize: "0.78rem", letterSpacing: "1px", boxShadow: "0 2px 8px rgba(39,174,96,0.4)" },
   soldTypeBadge: { background: "#eaf4fb", color: "#2980b9", padding: "2px 10px", borderRadius: "10px", fontSize: "0.78rem", fontWeight: "600" },
@@ -1382,7 +1466,7 @@ const styles = {
   bookingLocation: { margin: "0 0 6px", fontSize: "1rem", color: "#2c3e50", fontWeight: "700" },
   bookingMeta: { display: "flex", gap: "8px", flexWrap: "wrap" },
   bookingMetaChip: { background: "#f0f2f5", color: "#555", padding: "3px 10px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: "600" },
-  bookingStatus: { color: "#fff", padding: "4px 12px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: "700", flexShrink: 0 },
+  bookingStatus: { color: "#fff", padding: "4px 12px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: "700", flexShrink: 0, display: "inline-flex", alignItems: "center" },
   bookingTenantRow: { display: "flex", alignItems: "center", gap: "10px" },
   bookingTenantAvatar: { width: "34px", height: "34px", borderRadius: "50%", background: "#2c3e50", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "0.85rem", flexShrink: 0 },
   bookingTenantName: { margin: 0, fontWeight: "600", fontSize: "0.88rem", color: "#2c3e50" },

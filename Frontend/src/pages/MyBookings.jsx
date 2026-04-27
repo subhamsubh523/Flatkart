@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import API from "../api";
 import Spinner from "../components/Spinner";
 import ImageSlider from "../components/ImageSlider";
+import { FiList, FiCheckCircle, FiClock, FiXCircle, FiSlash, FiBookmark, FiMessageSquare, FiTag, FiDollarSign, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const statusConfig = {
-  pending:   { color: "#f39c12", bg: "#fef9e7", icon: "⏳", label: "Pending" },
-  approved:  { color: "#27ae60", bg: "#eafaf1", icon: "✅", label: "Approved" },
-  rejected:  { color: "#e74c3c", bg: "#fdf0f0", icon: "❌", label: "Rejected" },
-  cancelled: { color: "#7f8c8d", bg: "#f4f6f7", icon: "🚫", label: "Cancelled" },
+  pending:   { color: "#f39c12", bg: "#fef9e7", icon: <FiClock size={12} />,        label: "Pending" },
+  approved:  { color: "#27ae60", bg: "#eafaf1", icon: <FiCheckCircle size={12} />,  label: "Approved" },
+  rejected:  { color: "#e74c3c", bg: "#fdf0f0", icon: <FiXCircle size={12} />,      label: "Rejected" },
+  cancelled: { color: "#7f8c8d", bg: "#f4f6f7", icon: <FiSlash size={12} />,        label: "Cancelled" },
 };
+
 
 function ReviewSection({ flatId }) {
   const [review, setReview] = useState(null);
@@ -71,7 +73,12 @@ export default function MyBookings() {
   const [ownerData, setOwnerData] = useState({});
   const [cancelling, setCancelling] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
+  const [lbZoom, setLbZoom] = useState(1);
   const navigate = useNavigate();
+
+  const openLightbox = (images, idx) => { setLightbox({ images, idx }); setLbZoom(1); };
+  const closeLightbox = () => { setLightbox(null); setLbZoom(1); };
 
   const handleCancel = async (id) => {
     setConfirmId(null);
@@ -130,17 +137,17 @@ export default function MyBookings() {
       <div style={styles.header}>
         <h2 style={styles.title}>My Bookings</h2>
         <div style={styles.statsRow}>
-          <div style={styles.statPill}>📋 {counts.total} Total</div>
-          <div style={{ ...styles.statPill, background: "#eafaf1", color: "#27ae60" }}>✅ {counts.approved} Approved</div>
-          <div style={{ ...styles.statPill, background: "#fef9e7", color: "#f39c12" }}>⏳ {counts.pending} Pending</div>
-          <div style={{ ...styles.statPill, background: "#fdf0f0", color: "#e74c3c" }}>❌ {counts.rejected} Rejected</div>
-          <div style={{ ...styles.statPill, background: "#f4f6f7", color: "#7f8c8d" }}>🚫 {counts.cancelled} Cancelled</div>
+          <div style={styles.statPill}><FiList size={13} style={{ marginRight: 6, verticalAlign: "middle" }} />{counts.total} Total</div>
+          <div style={{ ...styles.statPill, background: "#eafaf1", color: "#27ae60" }}><FiCheckCircle size={13} style={{ marginRight: 6, verticalAlign: "middle" }} />{counts.approved} Approved</div>
+          <div style={{ ...styles.statPill, background: "#fef9e7", color: "#f39c12" }}><FiClock size={13} style={{ marginRight: 6, verticalAlign: "middle" }} />{counts.pending} Pending</div>
+          <div style={{ ...styles.statPill, background: "#fdf0f0", color: "#e74c3c" }}><FiXCircle size={13} style={{ marginRight: 6, verticalAlign: "middle" }} />{counts.rejected} Rejected</div>
+          <div style={{ ...styles.statPill, background: "#f4f6f7", color: "#7f8c8d" }}><FiSlash size={13} style={{ marginRight: 6, verticalAlign: "middle" }} />{counts.cancelled} Cancelled</div>
         </div>
       </div>
 
       {bookings.length === 0 ? (
         <div style={styles.empty}>
-          <span style={styles.emptyIcon}>🏚️</span>
+          <FiBookmark size={56} color="#bdc3c7" />
           <p style={styles.emptyTitle}>No bookings yet</p>
           <p style={styles.emptyDesc}>Browse available flats and send a booking request.</p>
         </div>
@@ -152,7 +159,13 @@ export default function MyBookings() {
               <div key={b._id} style={styles.row}>
                 {/* Image */}
                 <div style={styles.imgWrap}>
-                  <ImageSlider images={b.flat_id?.images} image={b.flat_id?.image} height="100%" noImgSize="2.5rem" />
+                  <ImageSlider
+                    images={b.flat_id?.images?.length ? b.flat_id.images : b.flat_id?.image ? [b.flat_id.image] : []}
+                    height="100%"
+                    noImgSize="2.5rem"
+                    onImageClick={openLightbox}
+                    labels={b.flat_id?.imageLabels}
+                  />
                 </div>
 
                 {/* Info */}
@@ -161,8 +174,8 @@ export default function MyBookings() {
                     <div>
                       <h3 style={styles.location}>{b.flat_id?.location}</h3>
                       <div style={styles.metaRow}>
-                        <span style={styles.metaChip}>🏷️ {b.flat_id?.type}</span>
-                        <span style={styles.metaChip}>💰 ₹{b.flat_id?.price?.toLocaleString()}/mo</span>
+                        <span style={styles.metaChip}><FiTag size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />{b.flat_id?.type}</span>
+                        <span style={styles.metaChip}><FiDollarSign size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />₹{b.flat_id?.price?.toLocaleString()}/month</span>
                       </div>
                     </div>
                     <span style={{ ...styles.statusBadge, background: s.color }}>{s.icon} {s.label}</span>
@@ -170,7 +183,7 @@ export default function MyBookings() {
 
                   <div style={{ ...styles.statusBar, background: s.bg, color: s.color, borderLeft: `3px solid ${s.color}` }}>
                     {b.status === "pending" && "Awaiting owner approval"}
-                    {b.status === "approved" && "🎉 Your booking is confirmed!"}
+                    {b.status === "approved" && "Your booking is confirmed!"}
                     {b.status === "rejected" && "Owner has declined this request."}
                     {b.status === "cancelled" && "You cancelled this booking."}
                   </div>
@@ -196,7 +209,7 @@ export default function MyBookings() {
                           } 
                         });
                       }}>
-                      💬 Chat with {ownerData[b.flat_id.owner_id]?.name || "Owner"}
+                      <FiMessageSquare size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Chat with {ownerData[b.flat_id.owner_id]?.name || "Owner"}
                     </button>
                   )}
 
@@ -236,14 +249,14 @@ const styles = {
   emptyDesc: { margin: 0, color: "#888", fontSize: "0.9rem" },
   list: { display: "flex", flexDirection: "column", gap: "16px" },
   row: { background: "#fff", borderRadius: "14px", boxShadow: "0 2px 12px rgba(0,0,0,0.08)", display: "flex", overflow: "hidden" },
-  imgWrap: { width: "140px", flexShrink: 0 },
+  imgWrap: { width: "180px", flexShrink: 0, cursor: "zoom-in" },
   img: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   noImg: { width: "100%", height: "100%", minHeight: "120px", background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" },
   info: { flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px" },
   infoTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
   location: { margin: "0 0 6px", fontSize: "1rem", fontWeight: "700", color: "#2c3e50" },
   metaRow: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  metaChip: { background: "#f0f2f5", color: "#555", padding: "3px 10px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: "600" },
+  metaChip: { background: "#f0f2f5", color: "#555", padding: "3px 10px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: "700", display: "inline-flex", alignItems: "center" },
   statusBadge: { color: "#fff", padding: "4px 10px", borderRadius: "20px", fontSize: "0.72rem", fontWeight: "700", flexShrink: 0, whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" },
   statusBar: { padding: "8px 12px", borderRadius: "6px", fontSize: "0.82rem", fontWeight: "600" },
   chatBtn: { alignSelf: "flex-start", padding: "7px 16px", background: "#f0f2f5", color: "#2c3e50", border: "1.5px solid #2c3e50", borderRadius: "8px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "600" },

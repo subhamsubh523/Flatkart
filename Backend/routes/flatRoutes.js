@@ -4,6 +4,7 @@ import auth from "../middleware/authMiddleware.js";
 import Flat from "../models/flat.js";
 import Booking from "../models/booking.js";
 import Owner from "../models/owner.js";
+import Message from "../models/message.js";
 import { upload, uploadToCloudinary, destroyFromCloudinary } from "../middleware/upload.js";
 import mongoose from "mongoose";
 
@@ -30,7 +31,12 @@ router.get("/stats", async (req, res) => {
 
 router.get("/mine", auth, async (req, res) => {
   const flats = await Flat.find({ owner_id: req.user.id });
-  res.json(flats);
+  const result = flats.map((f) => {
+    const obj = f.toObject();
+    obj.views = f.viewedBy ? f.viewedBy.length : 0;
+    return obj;
+  });
+  res.json(result);
 });
 
 router.get("/:id", async (req, res) => {
@@ -43,14 +49,14 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", auth, upload.array("images", 10), async (req, res) => {
   try {
-    const { location, price, type, description, state, district, city, locality, country, pincode, landmark, houseNo, roomWidth, roomBreadth, comments } = req.body;
+    const { location, price, type, description, state, district, city, locality, country, pincode, landmark, houseNo, flatName, roomWidth, roomBreadth, comments } = req.body;
     const uploaded = await Promise.all(
       (req.files || []).map((f) => uploadToCloudinary(f.buffer, "flatkart/flats"))
     );
     const images = uploaded.map((r) => r.secure_url);
     const imagePublicIds = uploaded.map((r) => r.public_id);
     const image = images[0] || null;
-    const flat = await Flat.create({ owner_id: req.user.id, location, price, type, description, image, images, imagePublicIds, state, district, city, locality, country, pincode, landmark, houseNo, roomWidth, roomBreadth, comments });
+    const flat = await Flat.create({ owner_id: req.user.id, location, price, type, description, image, images, imagePublicIds, state, district, city, locality, country, pincode, landmark, houseNo, flatName, roomWidth, roomBreadth, comments, imageLabels: req.body.imageLabels ? JSON.parse(req.body.imageLabels) : [] });
     res.json(flat);
   } catch (err) {
     console.error("Flat create error:", err);
@@ -70,6 +76,8 @@ router.put("/:id", auth, upload.array("images", 10), async (req, res) => {
     if (pincode) update.pincode = pincode;
     if (landmark !== undefined) update.landmark = landmark;
     if (houseNo !== undefined) update.houseNo = houseNo;
+    if (req.body.imageLabels !== undefined) update.imageLabels = JSON.parse(req.body.imageLabels);
+    if (req.body.flatName !== undefined) update.flatName = req.body.flatName;
     if (req.body.roomWidth !== undefined) update.roomWidth = req.body.roomWidth;
     if (req.body.roomBreadth !== undefined) update.roomBreadth = req.body.roomBreadth;
     if (req.body.comments !== undefined) update.comments = req.body.comments;
@@ -101,12 +109,18 @@ router.patch("/:id/view", async (req, res) => {
   const viewerId = req.body?.viewerId || req.ip || "guest";
   const flat = await Flat.findById(req.params.id);
   if (!flat) return res.status(404).json({ message: "Flat not found" });
-  if (!flat.viewedBy.includes(viewerId)) {
+  const alreadyViewed = flat.viewedBy.map((v) => v.toString()).includes(viewerId.toString());
+  if (!alreadyViewed) {
     flat.viewedBy.push(viewerId);
     flat.views = flat.viewedBy.length;
     await flat.save();
+  } else {
+    // Correct any drift between views and viewedBy.length
+    if (flat.views !== flat.viewedBy.length) {
+      flat.views = flat.viewedBy.length;
+      await flat.save();
+    }
   }
-  // Count tenant viewers = viewedBy entries that are not guest IDs
   const tenantViews = flat.viewedBy.filter((v) => !v.toString().startsWith("guest_")).length;
   res.json({ views: flat.views, tenantViews });
 });
@@ -141,8 +155,21 @@ router.patch("/:id/sold", auth, async (req, res) => {
 
 router.delete("/:id", auth, async (req, res) => {
   const flat = await Flat.findOneAndDelete({ _id: req.params.id, owner_id: req.user.id });
+  if (!flat) return res.status(404).json({ message: "Flat not found" });
   if (flat?.imagePublicIds?.length) {
     await Promise.all(flat.imagePublicIds.map(destroyFromCloudinary));
+  }
+  // Find all tenants who booked this flat
+  const bookings = await Booking.find({ flat_id: new mongoose.Types.ObjectId(req.params.id) });
+  const tenantIds = [...new Set(bookings.map((b) => b.tenant_id?.toString()).filter(Boolean))];
+  // Delete messages between owner and those tenants
+  if (tenantIds.length) {
+    await Message.deleteMany({
+      $or: [
+        { sender_id: req.user.id, receiver_id: { $in: tenantIds } },
+        { sender_id: { $in: tenantIds }, receiver_id: req.user.id },
+      ],
+    });
   }
   await Booking.deleteMany({ flat_id: new mongoose.Types.ObjectId(req.params.id) });
   res.json({ message: "Deleted" });

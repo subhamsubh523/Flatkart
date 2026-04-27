@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ModAPI from "../modApi";
 import AdminTable from "../../admin/components/AdminTable";
+import { FiHome } from "react-icons/fi";
 
 export default function ModFlats({ mod }) {
   const [flats, setFlats] = useState([]);
@@ -34,7 +35,7 @@ export default function ModFlats({ mod }) {
   const columns = [
     { key: "image", label: "Image", render: (f) => {
       const src = f.images?.[0] || f.image;
-      return src ? <img src={imgSrc(src)} alt="" style={cs.img} /> : <div style={cs.noImg}>🏠</div>;
+      return src ? <img src={imgSrc(src)} alt="" style={cs.img} /> : <div style={cs.noImg}><FiHome size={18} color="#aaa" /></div>;
     }},
     { key: "location", label: "Location" },
     { key: "type", label: "Type" },
@@ -58,12 +59,12 @@ export default function ModFlats({ mod }) {
     <div>
       <div style={cs.header}>
         <div>
-          <h2 style={cs.title}>🏠 Flats</h2>
+          <h2 style={cs.title}><FiHome size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Flats</h2>
           <p style={cs.sub}>{flats.length} total listings</p>
         </div>
         <input style={cs.search} placeholder="Search by location, type, city..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
-      <AdminTable columns={columns} data={filtered} loading={loading} emptyMsg="No flats found." />
+      <AdminTable columns={columns} data={filtered} loading={loading} emptyMsg="No flats found." emptyIcon={<FiHome size={56} color="#bdc3c7" style={{ marginBottom: 10 }} />} />
     </div>
   );
 }
@@ -74,7 +75,7 @@ const cs = {
   sub: { margin: 0, color: "#888", fontSize: "0.9rem" },
   search: { padding: "10px 16px", borderRadius: "8px", border: "1.5px solid #e0e0e0", outline: "none", fontSize: "0.92rem", minWidth: "260px" },
   img: { width: "60px", height: "44px", objectFit: "cover", borderRadius: "6px" },
-  noImg: { width: "60px", height: "44px", background: "#f0f2f5", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem" },
+  noImg: { width: "60px", height: "44px", background: "#f0f2f5", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center" },
   badge: { padding: "2px 8px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: "600", display: "inline-block" },
   actions: { display: "flex", gap: "8px" },
   btn: { padding: "5px 14px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.82rem", fontWeight: "600" },

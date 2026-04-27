@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminAPI from "../adminApi";
 import AdminTable from "../components/AdminTable";
-import { FiSlash, FiUserCheck, FiTrash2, FiCheckCircle, FiAlertCircle, FiAlertTriangle, FiX } from "react-icons/fi";
+import { FiSlash, FiUserCheck, FiTrash2, FiCheckCircle, FiAlertCircle, FiAlertTriangle, FiX, FiBookmark } from "react-icons/fi";
 
 const statusColor = {
   pending:  { bg: "#fef9e7", color: "#f39c12" },
@@ -114,7 +114,7 @@ export default function AdminBookings({ admin }) {
     <div>
       <div style={cs.header}>
         <div>
-          <h2 style={cs.title}>📋 Bookings</h2>
+          <h2 style={cs.title}><FiBookmark size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Bookings</h2>
           <p style={cs.sub}>{bookings.length} total bookings</p>
         </div>
         <div style={cs.filters}>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function ImageSlider({ images, image, height = "190px", noImgSize = "3rem", onImageClick }) {
+export default function ImageSlider({ images, image, height = "190px", noImgSize = "3rem", onImageClick, labels }) {
   const [idx, setIdx] = useState(0);
   const all = images?.length ? images : image ? [image] : [];
 
@@ -22,6 +22,11 @@ export default function ImageSlider({ images, image, height = "190px", noImgSize
         onClick={onImageClick ? (e) => { e.preventDefault(); e.stopPropagation(); onImageClick(all.map(src), idx); } : undefined}
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", cursor: onImageClick ? "zoom-in" : "default" }}
       />
+      {labels?.[idx] && (
+        <span style={{ position: "absolute", bottom: "8px", left: "8px", background: "linear-gradient(135deg, #1abc9c, #16a085)", color: "#fff", fontSize: "0.78rem", fontWeight: "700", padding: "4px 12px", borderRadius: "20px", pointerEvents: "none", letterSpacing: "0.3px", boxShadow: "0 3px 10px rgba(26,188,156,0.5)" }}>
+          {labels[idx]}
+        </span>
+      )}
       {all.length > 1 && (
         <>
           <button onClick={prev} style={{ ...arrow, left: "6px" }}>❮</button>

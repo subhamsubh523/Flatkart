@@ -4,7 +4,7 @@ import API from "../api";
 import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/Spinner";
 import toast from "react-hot-toast";
-import { FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiX, FiChevronLeft, FiChevronRight, FiFileText, FiKey, FiTag, FiDollarSign, FiMaximize2, FiUser, FiStar, FiEye, FiMap, FiMessageSquare, FiMapPin, FiHome, FiAlertTriangle, FiCheckCircle, FiNavigation, FiCalendar } from "react-icons/fi";
 
 export default function FlatDetail() {
   const { id } = useParams();
@@ -52,21 +52,21 @@ export default function FlatDetail() {
     API.get(`/flats/${id}`).then(({ data }) => setFlat(data));
     API.get(`/reviews/${id}/summary`).then(({ data }) => setRating(data));
     if (user?.role !== "owner") {
-      const sessionKey = `viewed_${id}`;
-      const isNew = !sessionStorage.getItem(sessionKey);
-      if (isNew) sessionStorage.setItem(sessionKey, "1");
       let viewerId = user?.id;
       if (!viewerId) {
-        viewerId = sessionStorage.getItem("guestId");
+        viewerId = localStorage.getItem("guestId");
         if (!viewerId) {
           viewerId = "guest_" + Math.random().toString(36).slice(2);
-          sessionStorage.setItem("guestId", viewerId);
+          localStorage.setItem("guestId", viewerId);
         }
       }
-      // Always patch so tenantViews in response reflects current tenant included
-      API.patch(`/flats/${id}/view`, { viewerId })
-        .then(({ data }) => setFlat((prev) => prev ? { ...prev, views: data.views, tenantViews: data.tenantViews } : prev))
-        .catch(() => {});
+      const sessionKey = `viewed_${id}_${viewerId}`;
+      if (!localStorage.getItem(sessionKey)) {
+        localStorage.setItem(sessionKey, "1");
+        API.patch(`/flats/${id}/view`, { viewerId })
+          .then(({ data }) => setFlat((prev) => prev ? { ...prev, views: data.views, tenantViews: data.tenantViews } : prev))
+          .catch(() => {});
+      }
     }
     if (user?.role === "tenant") {
       API.get("/bookings/my").then(({ data }) => {
@@ -113,9 +113,9 @@ export default function FlatDetail() {
 
   const getDirectionsUrl = () => {
     const query = encodeURIComponent(
-      [flat.locality, flat.city, flat.district, flat.state, flat.pincode].filter(Boolean).join(", ")
+      [flat.landmark, flat.locality, flat.city, flat.district, flat.state, flat.pincode, flat.country].filter(Boolean).join(", ")
     );
-    return `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+    return `https://www.google.com/maps/search/?api=1&query=${query}`;
   };
 
   if (!flat) return <Spinner fullPage />;
@@ -128,10 +128,17 @@ export default function FlatDetail() {
   const allImages = flat.images?.length ? flat.images : flat.image ? [flat.image] : [];
   const imgSrc = (s) => s?.startsWith("http") ? s : `http://localhost:5000/uploads/${s}`;
   const allImageUrls = allImages.map(imgSrc);
+  const labels = flat.imageLabels || [];
   const fullAddress = [flat.houseNo, flat.landmark, flat.locality, flat.city, flat.district, flat.state, flat.pincode, flat.country].filter(Boolean).join(", ");
 
   return (
     <div style={styles.page}>
+      {/* Back button */}
+      <div style={{ padding: "0 0 16px 0" }}>
+        <button onClick={() => navigate(-1)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "none", border: "1.5px solid #2c3e50", color: "#2c3e50", borderRadius: "8px", padding: "7px 16px", cursor: "pointer", fontSize: "0.88rem", fontWeight: "600" }}>
+          <FiChevronLeft size={16} />Back to Search
+        </button>
+      </div>
 
       {/* ── Hero Gallery ── */}
       <div style={styles.heroWrap}>
@@ -144,15 +151,16 @@ export default function FlatDetail() {
               onClick={() => openLightbox(allImageUrls, heroIdx)}
             />
           ) : (
-            <div style={styles.heroNoImg}>🏠</div>
+            <div style={styles.heroNoImg}><FiHome size={80} color="#bdc3c7" /></div>
           )}
-          <div style={styles.heroOverlay}>
-            <div style={styles.heroBadgeRow}>
-              <span style={styles.heroBadge}>{flat.type}</span>
-              {rating?.avg && <span style={styles.heroRating}>⭐ {rating.avg} ({rating.count})</span>}
-            </div>
-            <h1 style={styles.heroTitle}>{fullAddress || flat.location}</h1>
-            <p style={styles.heroPrice}>₹{flat.price?.toLocaleString()}<span style={styles.heroPerMonth}>/month</span></p>
+          {labels?.[heroIdx] && (
+            <span style={{ position: "absolute", bottom: "12px", left: "16px", background: "linear-gradient(135deg, #1abc9c, #16a085)", color: "#fff", fontSize: "0.88rem", fontWeight: "700", padding: "6px 18px", borderRadius: "20px", pointerEvents: "none", zIndex: 3, letterSpacing: "0.4px", boxShadow: "0 4px 12px rgba(26,188,156,0.5)" }}>
+              {labels[heroIdx]}
+            </span>
+          )}
+          <div style={{ position: "absolute", top: "12px", left: "16px", display: "flex", alignItems: "center", gap: "8px", zIndex: 3 }}>
+            <span style={styles.heroBadge}>{flat.type}</span>
+            {rating?.avg && <span style={styles.heroRating}><FiStar size={12} style={{ marginRight: 4, verticalAlign: "middle", fill: "#f39c12", color: "#f39c12" }} />{rating.avg} ({rating.count})</span>}
           </div>
           {allImageUrls.length > 1 && (
             <>
@@ -180,6 +188,14 @@ export default function FlatDetail() {
             ))}
           </div>
         )}
+
+        {/* Title & Price below image */}
+        <div style={{ margin: "0 24px", padding: "20px 24px", background: "#fff", borderRadius: allImageUrls.length > 1 ? "0" : "0 0 16px 16px", boxShadow: "0 4px 12px rgba(0,0,0,0.06)", borderTop: "1px solid #f0f0f0" }}>
+          <h1 style={{ margin: "0 0 8px", fontSize: "1.5rem", color: "#2c3e50", fontWeight: "800", lineHeight: 1.3 }}>{fullAddress || flat.location}</h1>
+          <p style={{ margin: 0, fontSize: "1.6rem", fontWeight: "800", color: "#1abc9c", display: "flex", alignItems: "baseline", gap: "4px" }}>
+            ₹{flat.price?.toLocaleString()}<span style={{ fontSize: "0.95rem", fontWeight: "400", color: "#888" }}>/month</span>
+          </p>
+        </div>
       </div>
 
       {/* ── Body ── */}
@@ -188,7 +204,7 @@ export default function FlatDetail() {
           {/* Description */}
           <div style={styles.card}>
             <div style={styles.cardTitleRow}>
-              <span style={styles.cardTitleIcon}>📋</span>
+              <FiFileText size={20} color="#1abc9c" />
               <h3 style={styles.cardTitle}>About this Flat</h3>
             </div>
             <p style={styles.desc}>{flat.description || "No description provided."}</p>
@@ -197,23 +213,24 @@ export default function FlatDetail() {
           {/* Key Details */}
           <div style={styles.card}>
             <div style={styles.cardTitleRow}>
-              <span style={styles.cardTitleIcon}>🔑</span>
+              <FiKey size={20} color="#1abc9c" />
               <h3 style={styles.cardTitle}>Key Details</h3>
             </div>
             <div style={styles.detailGrid}>
-              <DetailItem icon="🏷️" label="Type" value={flat.type} />
-              <DetailItem icon="💰" label="Rent" value={`₹${flat.price?.toLocaleString()}/month`} />
-              {flat.roomWidth && flat.roomBreadth && <DetailItem icon="📐" label="Room Size" value={`${flat.roomWidth} × ${flat.roomBreadth} ft`} />}
-              {flat.ownerName && <DetailItem icon="👤" label="Owner" value={flat.ownerName} />}
-              {rating?.avg && <DetailItem icon="⭐" label="Rating" value={`${rating.avg}/5 (${rating.count} review${rating.count !== 1 ? "s" : ""})`} />}
-              {flat.views > 0 && <DetailItem icon="👁️" label={user?.role === "tenant" ? "Viewing" : "Views"} value={viewLabel} />}
+              <DetailItem icon={<FiTag size={18} />} label="Type" value={flat.type} />
+              <DetailItem icon={<FiDollarSign size={18} />} label="Rent" value={`₹${flat.price?.toLocaleString()}/month`} />
+              {flat.roomWidth && flat.roomBreadth && <DetailItem icon={<FiMaximize2 size={18} />} label="Room Size" value={`${flat.roomWidth} × ${flat.roomBreadth} ft`} />}
+              {flat.ownerName && <DetailItem icon={<FiUser size={18} />} label="Owner" value={flat.ownerName} />}
+              {rating?.avg && <DetailItem icon={<FiStar size={18} />} label="Rating" value={`${rating.avg}/5 (${rating.count} review${rating.count !== 1 ? "s" : ""})`} />}
+              {flat.views > 0 && <DetailItem icon={<FiEye size={18} />} label={user?.role === "tenant" ? "Viewed" : "Views"} value={viewLabel} />}
+              {flat._id && <DetailItem icon={<FiCalendar size={18} />} label="Listed On" value={new Date(parseInt(flat._id.substring(0, 8), 16) * 1000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} />}
             </div>
           </div>
 
           {/* Address */}
           <div style={styles.card}>
             <div style={styles.cardTitleRow}>
-              <span style={styles.cardTitleIcon}>📍</span>
+              <FiMapPin size={20} color="#1abc9c" />
               <h3 style={styles.cardTitle}>Location & Address</h3>
             </div>
             <div style={styles.addressGrid}>
@@ -226,7 +243,11 @@ export default function FlatDetail() {
               {flat.pincode && <AddressItem label="Pincode" value={flat.pincode} />}
             </div>
             <a href={getDirectionsUrl()} target="_blank" rel="noreferrer" style={styles.mapLink}>
-              🗺️ Open in Google Maps
+              <svg width="16" height="16" viewBox="0 0 24 24" style={{ marginRight: 6, flexShrink: 0 }}>
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/>
+                <circle cx="12" cy="9" r="2.5" fill="#fff"/>
+              </svg>
+              Open in Google Maps
             </a>
           </div>
 
@@ -234,7 +255,7 @@ export default function FlatDetail() {
           {flat.comments && (
             <div style={styles.card}>
               <div style={styles.cardTitleRow}>
-                <span style={styles.cardTitleIcon}>💬</span>
+                <FiMessageSquare size={20} color="#1abc9c" />
                 <h3 style={styles.cardTitle}>Owner's Note</h3>
               </div>
               <p style={styles.commentsText}>"{flat.comments}"</p>
@@ -257,43 +278,43 @@ export default function FlatDetail() {
                 )}
               </div>
               <div style={styles.bookingMetaInline}>
-                <BookingRow label="🏷️ Type" value={flat.type} />
-                {flat.houseNo && <BookingRow label="🚪 House No" value={flat.houseNo} />}
-                {flat.location && <BookingRow label="📍 Location" value={flat.location} />}
-                {flat.locality && <BookingRow label="🏘️ Locality" value={flat.locality} />}
-                {flat.landmark && <BookingRow label="🗿 Landmark" value={flat.landmark} />}
-                {flat.city && <BookingRow label="🏙️ City" value={flat.city} />}
-                {flat.district && <BookingRow label="🗺️ District" value={flat.district} />}
-                {flat.state && <BookingRow label="📌 State" value={flat.state} />}
-                {flat.pincode && <BookingRow label="🔢 Pincode" value={flat.pincode} />}
-                {flat.roomWidth && flat.roomBreadth && <BookingRow label="📐 Room Size" value={`${flat.roomWidth} × ${flat.roomBreadth} ft`} />}
-                {flat.ownerName && <BookingRow label="👤 Owner" value={flat.ownerName} />}
-                {rating?.avg && <BookingRow label="⭐ Rating" value={`${rating.avg}/5 (${rating.count} reviews)`} />}
-                {flat.views > 0 && <BookingRow label="👁️ Viewing" value={viewLabel} />}
+                <BookingRow label={<><FiTag size={12} style={{ marginRight: 4 }} />Type</>} value={flat.type} />
+                {flat.houseNo && <BookingRow label={<><FiHome size={12} style={{ marginRight: 4 }} />House No</>} value={flat.houseNo} />}
+                {flat.location && <BookingRow label={<><FiMapPin size={12} style={{ marginRight: 4 }} />Location</>} value={flat.location} />}
+                {flat.locality && <BookingRow label={<><FiMapPin size={12} style={{ marginRight: 4 }} />Locality</>} value={flat.locality} />}
+                {flat.landmark && <BookingRow label={<><FiMapPin size={12} style={{ marginRight: 4 }} />Landmark</>} value={flat.landmark} />}
+                {flat.city && <BookingRow label={<><FiMapPin size={12} style={{ marginRight: 4 }} />City</>} value={flat.city} />}
+                {flat.district && <BookingRow label={<><FiMap size={12} style={{ marginRight: 4 }} />District</>} value={flat.district} />}
+                {flat.state && <BookingRow label={<><FiMap size={12} style={{ marginRight: 4 }} />State</>} value={flat.state} />}
+                {flat.pincode && <BookingRow label={<><FiMapPin size={12} style={{ marginRight: 4 }} />Pincode</>} value={flat.pincode} />}
+                {flat.roomWidth && flat.roomBreadth && <BookingRow label={<><FiMaximize2 size={12} style={{ marginRight: 4 }} />Room Size</>} value={`${flat.roomWidth} × ${flat.roomBreadth} ft`} />}
+                {flat.ownerName && <BookingRow label={<><FiUser size={12} style={{ marginRight: 4 }} />Owner</>} value={flat.ownerName} />}
+                {rating?.avg && <BookingRow label={<><FiStar size={12} style={{ marginRight: 4 }} />Rating</>} value={`${rating.avg}/5 (${rating.count} reviews)`} />}
+                {flat.views > 0 && <BookingRow label={<><FiEye size={12} style={{ marginRight: 4 }} />Viewed</>} value={viewLabel} />}
               </div>
             </div>
 
             <div style={styles.bookingDivider} />
 
             {msg === "success" ? (
-              <div style={styles.successMsg}>✅ Booking request sent! The owner will review it shortly.</div>
+              <div style={styles.successMsg}><FiCheckCircle size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Booking request sent! The owner will review it shortly.</div>
             ) : msg ? (
-              <div style={styles.errorMsg}>⚠️ {msg}</div>
+              <div style={styles.errorMsg}><FiAlertTriangle size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />{msg}</div>
             ) : null}
 
             <div style={styles.bookingActions}>
               {user?.role === "tenant" && !hasBooked && msg !== "success" && (
                 <button style={{ ...styles.bookBtn, opacity: booking ? 0.7 : 1 }} onClick={() => setShowConfirm(true)} disabled={booking}>
-                  {booking ? "Sending..." : "🏠 Book This Flat"}
+                  {booking ? "Sending..." : <><FiHome size={15} style={{ marginRight: 6, verticalAlign: "middle" }} />Book This Flat</>}
                 </button>
               )}
               {user?.role === "tenant" && (hasBooked || msg === "success") && (
                 <button style={{ ...styles.cancelBtn, opacity: cancelling ? 0.7 : 1 }} onClick={() => setShowCancelConfirm(true)} disabled={cancelling}>
-                  {cancelling ? "Cancelling..." : "✕ Cancel Booking"}
+                  {cancelling ? "Cancelling..." : <><FiX size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Cancel Booking</>}
                 </button>
               )}
               <a href={getDirectionsUrl()} target="_blank" rel="noreferrer" style={styles.dirBtn}>
-                📍 Get Directions
+                <FiNavigation size={15} />Get Directions
               </a>
               {user?.role === "tenant" && hasBooked && flat.owner_id && (
                 <button style={styles.chatBtn} onClick={async () => {
@@ -309,7 +330,7 @@ export default function FlatDetail() {
                     navigate(`/chat/${flat.owner_id}`, { state: { name: flat.ownerName } });
                   }
                 }}>
-                  💬 Chat with Owner
+                  <FiMessageSquare size={15} style={{ marginRight: 6, verticalAlign: "middle" }} />Chat with Owner
                 </button>
               )}
             </div>
@@ -322,7 +343,7 @@ export default function FlatDetail() {
       {showCancelConfirm && (
         <div style={confirmStyles.overlay}>
           <div style={confirmStyles.box}>
-            <h3 style={{ ...confirmStyles.title, color: "#e74c3c" }}>🚫 Cancel Booking</h3>
+            <h3 style={{ ...confirmStyles.title, color: "#e74c3c" }}><FiAlertTriangle size={18} style={{ marginRight: 8, verticalAlign: "middle" }} />Cancel Booking</h3>
             <p style={confirmStyles.text}>Are you sure you want to cancel your booking request for this flat?</p>
             <div style={confirmStyles.actions}>
               <button style={confirmStyles.cancelBtn} onClick={() => setShowCancelConfirm(false)}>No, Keep It</button>
@@ -334,7 +355,7 @@ export default function FlatDetail() {
       {showConfirm && (
         <div style={confirmStyles.overlay}>
           <div style={confirmStyles.box}>
-            <h3 style={confirmStyles.title}>🏠 Confirm Booking</h3>
+            <h3 style={confirmStyles.title}><FiHome size={18} style={{ marginRight: 8, verticalAlign: "middle" }} />Confirm Booking</h3>
             <p style={confirmStyles.text}>Are you sure you want to send a booking request for this flat?</p>
             <p style={confirmStyles.price}>₹{flat.price?.toLocaleString()}<span style={confirmStyles.perMonth}>/month</span></p>
             <div style={confirmStyles.actions}>
@@ -413,13 +434,13 @@ function BookingRow({ label, value }) {
 }
 
 const styles = {
-  page: { maxWidth: "1140px", margin: "0 auto", padding: "24px 0 60px", background: "#f5f6fa" },
+  page: { maxWidth: "1140px", margin: "0 auto", padding: "16px 0 60px", background: "#f5f6fa" },
 
   // Hero
   heroWrap: { marginBottom: "32px" },
-  hero: { position: "relative", height: "460px", overflow: "hidden", borderRadius: "16px", margin: "0 24px", background: "#1a252f" },
+  hero: { position: "relative", height: "400px", overflow: "hidden", borderRadius: "16px 16px 0 0", margin: "0 24px", background: "#1a252f" },
   heroImg: { width: "100%", height: "100%", objectFit: "cover", display: "block", cursor: "zoom-in", transition: "opacity 0.2s" },
-  heroNoImg: { width: "100%", height: "100%", background: "linear-gradient(135deg,#ecf0f1,#bdc3c7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" },
+  heroNoImg: { width: "100%", height: "100%", background: "linear-gradient(135deg,#ecf0f1,#bdc3c7)", display: "flex", alignItems: "center", justifyContent: "center" },
   heroOverlay: { position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.05) 50%, transparent 100%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "32px 40px", pointerEvents: "none" },
   galleryArrow: { position: "absolute", top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", color: "#fff", border: "none", borderRadius: "50%", width: "44px", height: "44px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3, transition: "background 0.2s" },
   heroDots: { position: "absolute", bottom: "16px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "6px", zIndex: 3 },
@@ -441,21 +462,20 @@ const styles = {
   // Cards
   card: { background: "#fff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1px solid #f0f0f0" },
   cardTitleRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px", paddingBottom: "14px", borderBottom: "2px solid #f0f2f5" },
-  cardTitleIcon: { fontSize: "1.3rem" },
   cardTitle: { margin: 0, fontSize: "1.1rem", color: "#2c3e50", fontWeight: "700" },
   desc: { color: "#555", lineHeight: "1.9", fontSize: "0.97rem", margin: 0 },
 
   // Key Details Grid
   detailGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "14px" },
   detailItem: { display: "flex", alignItems: "flex-start", gap: "12px", background: "linear-gradient(135deg,#f8f9ff,#f0f2f5)", padding: "14px 16px", borderRadius: "12px", border: "1px solid #e8eaf0" },
-  detailIcon: { fontSize: "1.4rem", marginTop: "2px" },
+  detailIcon: { color: "#1abc9c", marginTop: "2px", flexShrink: 0 },
   detailLabel: { margin: "0 0 3px", fontSize: "0.75rem", color: "#999", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" },
   detailValue: { margin: 0, fontSize: "0.95rem", color: "#2c3e50", fontWeight: "700" },
 
   // Address
   addressGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "18px" },
   addressItem: { background: "#f8f9fa", borderRadius: "10px", padding: "12px 16px", border: "1px solid #eee" },
-  addressHighlight: { background: "linear-gradient(135deg,#eafaf1,#d5f5e3)", border: "1px solid #a9dfbf" },
+  addressHighlight: { background: "#f8f9fa", border: "1px solid #eee" },
   addressLabel: { display: "block", fontSize: "0.72rem", color: "#999", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" },
   addressValue: { display: "block", fontSize: "0.93rem", color: "#2c3e50", fontWeight: "600" },
   mapLink: { display: "inline-flex", alignItems: "center", gap: "6px", color: "#2980b9", fontWeight: "600", fontSize: "0.9rem", textDecoration: "none", padding: "8px 16px", background: "#eaf4fb", borderRadius: "8px", border: "1px solid #aed6f1" },

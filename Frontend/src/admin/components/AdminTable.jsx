@@ -1,6 +1,13 @@
-export default function AdminTable({ columns, data, loading, emptyMsg = "No data found." }) {
+import { FiBookmark } from "react-icons/fi";
+
+export default function AdminTable({ columns, data, loading, emptyMsg = "No data found.", emptyIcon }) {
   if (loading) return <div style={s.loading}>Loading...</div>;
-  if (!data.length) return <div style={s.empty}>{emptyMsg}</div>;
+  if (!data.length) return (
+    <div style={s.empty}>
+      {emptyIcon || <FiBookmark size={56} color="#bdc3c7" style={{ marginBottom: 10 }} />}
+      <div>{emptyMsg}</div>
+    </div>
+  );
 
   return (
     <div style={s.wrap}>
@@ -34,5 +41,5 @@ const s = {
   tr: { borderBottom: "1px solid #f0f0f0" },
   td: { padding: "12px 16px", fontSize: "0.88rem", color: "#444", verticalAlign: "middle" },
   loading: { padding: "40px", textAlign: "center", color: "#888" },
-  empty: { padding: "40px", textAlign: "center", color: "#aaa", fontSize: "0.95rem" },
+  empty: { padding: "40px", textAlign: "center", color: "#aaa", fontSize: "0.95rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" },
 };

@@ -4,7 +4,7 @@ import API from "../api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import Spinner from "../components/Spinner";
-import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle, FiSearch, FiCalendar, FiMessageSquare, FiStar, FiList, FiBarChart2, FiCheckSquare } from "react-icons/fi";
+import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle, FiSearch, FiCalendar, FiMessageSquare, FiStar, FiList, FiBarChart2, FiCheckSquare, FiUser, FiBriefcase, FiHome } from "react-icons/fi";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "", role: "tenant" });
@@ -38,9 +38,9 @@ export default function Login() {
   return (
     <div style={styles.page}>
       {/* Left Panel */}
-      <div style={{ ...styles.left, background: isOwner ? "linear-gradient(135deg, #0f2027, #203a43, #2c5364)" : "linear-gradient(135deg, #1a252f 0%, #2c3e50 100%)" }}>
+      <div style={{ ...styles.left, background: isOwner ? "linear-gradient(135deg, #0f2027, #203a43, #2c5364)" : "linear-gradient(135deg, #1a252f 0%, #2c3e50 100%)" }} className="auth-left-panel">
         <div style={styles.leftContent}>
-          <h1 style={{ ...styles.brand, color: accent }}>🏠 FLATKART</h1>
+          <h1 style={{ ...styles.brand, color: accent }}><FiHome size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />FLATKART</h1>
           {isOwner ? (
             <>
               <h2 style={styles.leftTitle}>Welcome back, <span style={{ color: "#f1c40f" }}>Owner!</span></h2>
@@ -82,23 +82,24 @@ export default function Login() {
       </div>
 
       {/* Right Panel */}
-      <div style={styles.right}>
+      <div style={styles.right} className="auth-right-panel">
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <h2 style={styles.title}>Sign In</h2>
             <p style={styles.subtitle}>Enter your credentials to continue</p>
           </div>
 
+          <p style={{ margin: "0 0 8px", fontSize: "0.85rem", fontWeight: "600", color: "#444" }}>Login as:</p>
           <div style={styles.roleToggle}>
             <button type="button"
               style={{ ...styles.roleBtn, ...(form.role === "tenant" ? styles.roleBtnActive : {}) }}
               onClick={() => setForm({ ...form, role: "tenant" })}>
-              🏠 Tenant
+              <FiUser size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Tenant
             </button>
             <button type="button"
               style={{ ...styles.roleBtn, ...(form.role === "owner" ? styles.roleBtnOwnerActive : {}) }}
               onClick={() => setForm({ ...form, role: "owner" })}>
-              🏢 Owner
+              <FiBriefcase size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Owner
             </button>
           </div>
 
@@ -126,7 +127,7 @@ export default function Login() {
               <div style={styles.inputWrapper}>
                 <span style={styles.inputIcon}><FiLock size={15} /></span>
                 <input
-                  style={{ ...styles.input, paddingRight: "42px" }}
+                  style={styles.input}
                   placeholder="Password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
@@ -161,7 +162,7 @@ export default function Login() {
 }
 
 const styles = {
-  page: { display: "flex", minHeight: "calc(100vh - 60px)" },
+  page: { display: "flex", minHeight: "calc(100vh - 60px)", overflow: "auto", flexDirection: "row", flexWrap: "nowrap" },
   left: { flex: 1, background: "linear-gradient(135deg, #1a252f 0%, #2c3e50 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "48px", "@media(max-width:768px)": { display: "none" } },
   leftContent: { maxWidth: "400px" },
   brand: { color: "#1abc9c", fontSize: "1.5rem", margin: "0 0 32px", fontWeight: "800" },
@@ -170,7 +171,7 @@ const styles = {
   features: { display: "flex", flexDirection: "column", gap: "12px" },
   featureItem: { display: "flex", alignItems: "center", gap: "10px", color: "#ecf0f1", fontSize: "0.95rem", background: "rgba(255,255,255,0.06)", padding: "10px 16px", borderRadius: "8px", borderLeft: "3px solid #1abc9c" },
   right: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5", padding: "32px 24px" },
-  card: { background: "#fff", borderRadius: "16px", padding: "40px", width: "100%", maxWidth: "420px", boxShadow: "0 8px 32px rgba(0,0,0,0.1)" },
+  card: { background: "#fff", borderRadius: "16px", padding: "40px", width: "100%", maxWidth: "420px", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", overflow: "hidden" },
   cardHeader: { marginBottom: "24px" },
   title: { margin: "0 0 6px", fontSize: "1.7rem", color: "#2c3e50", fontWeight: "700" },
   subtitle: { margin: 0, color: "#888", fontSize: "0.92rem" },
@@ -181,9 +182,9 @@ const styles = {
   label: { fontSize: "0.85rem", fontWeight: "600", color: "#444" },
   forgotLink: { fontSize: "0.82rem", color: "#1abc9c", textDecoration: "none" },
   inputWrapper: { position: "relative", display: "flex", alignItems: "center" },
-  inputIcon: { position: "absolute", left: "12px", fontSize: "0.95rem", pointerEvents: "none" },
-  input: { width: "100%", padding: "11px 12px 11px 38px", fontSize: "0.97rem", borderRadius: "8px", border: "1.5px solid #e0e0e0", outline: "none", boxSizing: "border-box", background: "#fafafa" },
-  eyeBtn: { position: "absolute", right: "12px", background: "none", border: "none", cursor: "pointer", fontSize: "1rem", padding: 0 },
+  inputIcon: { position: "absolute", left: "12px", fontSize: "0.95rem", pointerEvents: "none", zIndex: 1 },
+  input: { width: "100%", padding: "11px 42px 11px 38px", fontSize: "0.97rem", borderRadius: "8px", border: "1.5px solid #e0e0e0", outline: "none", boxSizing: "border-box", background: "#fafafa" },
+  eyeBtn: { position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "1rem", padding: 0, color: "#666", zIndex: 1 },
   btn: { padding: "13px", background: "linear-gradient(135deg, #1abc9c, #16a085)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "1rem", fontWeight: "700", letterSpacing: "0.3px", marginTop: "4px" },
   roleToggle: { display: "flex", background: "#f0f2f5", borderRadius: "10px", padding: "4px", marginBottom: "20px", gap: "4px" },
   roleBtn: { flex: 1, padding: "9px", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "0.92rem", fontWeight: "600", background: "transparent", color: "#888" },

@@ -16,13 +16,9 @@ export default function Footer() {
 
         {/* Brand */}
         <div style={styles.brandCol}>
-          <div style={styles.brandLogo}>🏠</div>
+          <div style={styles.brandLogo}><FiHome size={32} color="#1abc9c" /></div>
           <span style={styles.brandName}>FLAT<span style={styles.brandAccent}>KART</span></span>
           <p style={styles.tagline}>Your trusted platform to find, list, and book flats across India — fast, easy, and verified.</p>
-          <div style={styles.socialRow}>
-            <a href="mailto:flatkart.support@gmail.com" style={styles.socialBtn} title="Email us"><FiMail size={16} /></a>
-            <a href="tel:+917381472718" style={styles.socialBtn} title="Call us"><FiPhone size={16} /></a>
-          </div>
         </div>
 
         {/* Quick Links */}
@@ -125,6 +121,6 @@ const styles = {
   // Bottom
   bottom: { borderTop: "1px solid rgba(255,255,255,0.07)", padding: "18px 48px" },
   bottomInner: { display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: "8px" },
-  copy: { margin: 0, fontSize: "0.82rem", color: "#636e72" },
+  copy: { margin: 0, fontSize: "0.82rem", color: "#fff" },
   madeWith: { margin: 0, fontSize: "0.82rem", color: "#636e72" },
 };

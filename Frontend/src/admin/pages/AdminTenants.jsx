@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminAPI from "../adminApi";
 import AdminTable from "../components/AdminTable";
-import { FiCheckCircle, FiSlash, FiTrash2, FiUserCheck, FiAlertTriangle, FiX } from "react-icons/fi";
+import { FiCheckCircle, FiSlash, FiTrash2, FiUserCheck, FiAlertTriangle, FiX, FiUser } from "react-icons/fi";
 
 export default function AdminTenants() {
   const [tenants, setTenants] = useState([]);
@@ -60,7 +60,7 @@ export default function AdminTenants() {
     <div>
       <div style={cs.header}>
         <div>
-          <h2 style={cs.title}>👤 Tenants</h2>
+          <h2 style={cs.title}><FiUser size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Tenants</h2>
           <p style={cs.sub}>{tenants.length} registered tenants</p>
         </div>
         <input style={cs.search} placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />

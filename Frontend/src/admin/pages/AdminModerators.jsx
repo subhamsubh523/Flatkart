@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import AdminAPI from "../adminApi";
-import { FiAlertTriangle, FiX, FiUserPlus, FiSave, FiEye, FiEyeOff, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiAlertTriangle, FiX, FiUserPlus, FiSave, FiEye, FiEyeOff, FiEdit2, FiTrash2, FiShield, FiUsers, FiHome, FiBookmark, FiAlertCircle } from "react-icons/fi";
 
 const SECTIONS = [
-  { key: "owners",   label: "🏢 Owners",   ops: ["read", "update", "delete"] },
-  { key: "tenants",  label: "👤 Tenants",  ops: ["read", "update", "delete"] },
-  { key: "flats",    label: "🏠 Flats",    ops: ["read", "update", "delete"] },
-  { key: "bookings", label: "📋 Bookings", ops: ["read", "update", "delete"] },
+  { key: "owners",   label: "Owners",   icon: <FiUsers size={13} style={{ marginRight: 5, verticalAlign: "middle" }} />,    ops: ["read", "update", "delete"] },
+  { key: "tenants",  label: "Tenants",  icon: <FiShield size={13} style={{ marginRight: 5, verticalAlign: "middle" }} />,   ops: ["read", "update", "delete"] },
+  { key: "flats",    label: "Flats",    icon: <FiHome size={13} style={{ marginRight: 5, verticalAlign: "middle" }} />,     ops: ["read", "update", "delete"] },
+  { key: "bookings", label: "Bookings", icon: <FiBookmark size={13} style={{ marginRight: 5, verticalAlign: "middle" }} />, ops: ["read", "update", "delete"] },
 ];
 
 const OP_LABELS = { read: "View", create: "Create", update: "Edit", delete: "Delete" };
@@ -15,7 +15,7 @@ const OP_COLORS = { read: "#3498db", create: "#27ae60", update: "#f39c12", delet
 const perm = (section, op) => `${section}:${op}`;
 const allPerms = SECTIONS.flatMap((s) => s.ops.map((op) => perm(s.key, op)));
 
-const EMPTY_FORM = { name: "", email: "", password: "", permissions: [] };
+const EMPTY_FORM = { name: "", emailPrefix: "", password: "", permissions: [] };
 
 export default function AdminModerators() {
   const [mods, setMods] = useState([]);
@@ -33,7 +33,7 @@ export default function AdminModerators() {
   }, []);
 
   const openAdd = () => { setEditMod(null); setForm(EMPTY_FORM); setError(""); setShowPass(false); setShowModal(true); };
-  const openEdit = (mod) => { setEditMod(mod); setForm({ name: mod.name, email: mod.email, password: "", permissions: [...(mod.permissions || [])] }); setError(""); setShowPass(false); setShowModal(true); };
+  const openEdit = (mod) => { setEditMod(mod); setForm({ name: mod.name, emailPrefix: (mod.email || "").replace("@flatkart.com", ""), password: "", permissions: [...(mod.permissions || [])] }); setError(""); setShowPass(false); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setError(""); };
 
   const hasPerm = (p) => form.permissions.includes(p);
@@ -63,13 +63,13 @@ export default function AdminModerators() {
     setSaving(true);
     try {
       if (editMod) {
-        const payload = { name: form.name, email: form.email, permissions: form.permissions };
+        const payload = { name: form.name, email: `${form.emailPrefix}@flatkart.com`, permissions: form.permissions };
         if (form.password) payload.password = form.password;
         const { data } = await AdminAPI.put(`/moderators/${editMod._id}`, payload);
         setMods((prev) => prev.map((m) => m._id === editMod._id ? data : m));
       } else {
         if (!form.password) { setError("Password is required"); setSaving(false); return; }
-        const { data } = await AdminAPI.post("/moderators", form);
+        const { data } = await AdminAPI.post("/moderators", { ...form, email: `${form.emailPrefix}@flatkart.com` });
         setMods((prev) => [data, ...prev]);
       }
       closeModal();
@@ -95,7 +95,7 @@ export default function AdminModerators() {
     <div>
       <div style={s.header}>
         <div>
-          <h2 style={s.title}>👥 Moderators</h2>
+          <h2 style={s.title}><FiShield size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Moderators</h2>
           <p style={s.sub}>{mods.length} moderator{mods.length !== 1 ? "s" : ""}</p>
         </div>
         <button style={s.addBtn} onClick={openAdd}><FiUserPlus size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Add New Moderator</button>
@@ -104,7 +104,7 @@ export default function AdminModerators() {
       {loading ? <p style={{ color: "#888", padding: "40px", textAlign: "center" }}>Loading...</p>
         : mods.length === 0 ? (
           <div style={s.empty}>
-            <span style={{ fontSize: "3rem" }}>👥</span>
+            <FiShield size={56} color="#bdc3c7" />
             <p style={{ color: "#888", margin: "12px 0 0" }}>No moderators yet. Add one to delegate admin tasks.</p>
           </div>
         ) : (
@@ -123,7 +123,7 @@ export default function AdminModerators() {
                     </div>
                     <p style={s.modEmail}>{mod.email}</p>
                     <span style={s.permBadge}>{mod.permissions?.length || 0} permission{mod.permissions?.length !== 1 ? "s" : ""}</span>
-                    {mod.blocked && <span style={s.blockedBadge}>🚫 Disabled</span>}
+                    {mod.blocked && <span style={s.blockedBadge}><FiAlertCircle size={10} style={{ marginRight: 3, verticalAlign: "middle" }} />Disabled</span>}
                   </div>
                 </div>
 
@@ -186,26 +186,35 @@ export default function AdminModerators() {
         <div style={s.overlay} onClick={closeModal}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>{editMod ? "✏️ Edit Moderator" : "➕ Add Moderator"}</h3>
-              <button style={s.closeBtn} onClick={closeModal}>✕</button>
+              <h3 style={s.modalTitle}>{editMod ? <><FiEdit2 size={15} style={{ marginRight: 6, verticalAlign: "middle" }} />Edit Moderator</> : <><FiUserPlus size={15} style={{ marginRight: 6, verticalAlign: "middle" }} />Add Moderator</>}</h3>
+              <button style={s.closeBtn} onClick={closeModal}><FiX size={16} /></button>
             </div>
 
-            {error && <div style={s.errorBox}>⚠️ {error}</div>}
+            {error && <div style={s.errorBox}><FiAlertTriangle size={13} style={{ marginRight: 6, verticalAlign: "middle" }} />{error}</div>}
 
             <form onSubmit={handleSave} style={s.form}>
               {/* Basic Info */}
               <div style={s.group}>
                 <label style={s.label}>Full Name</label>
                 <input style={s.input} placeholder="Enter name" value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const capitalized = val.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+                    setForm({ ...form, name: capitalized });
+                  }}
+                  required />
               </div>
 
               {!editMod && (
                 <>
                   <div style={s.group}>
-                    <label style={s.label}>Email Address</label>
-                    <input style={s.input} type="email" placeholder="Email" value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                    <label style={s.label}>Moderator Address</label>
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <input style={{ ...s.input, paddingRight: "110px" }} type="text" placeholder="Moderator ID"
+                        value={form.emailPrefix}
+                        onChange={(e) => setForm({ ...form, emailPrefix: e.target.value })} required />
+                      <span style={{ position: "absolute", right: "12px", fontSize: "0.82rem", color: "#2c3e50", fontWeight: "600", pointerEvents: "none", whiteSpace: "nowrap" }}>@flatkart.com</span>
+                    </div>
                   </div>
                   <div style={s.group}>
                     <label style={s.label}>Password</label>
@@ -226,8 +235,12 @@ export default function AdminModerators() {
                 <>
                   <div style={s.group}>
                     <label style={s.label}>Email Address</label>
-                    <input style={s.input} type="email" placeholder="moderator@flatkart.com" value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <input style={{ ...s.input, paddingRight: "110px" }} type="text" placeholder="Moderator ID"
+                        value={form.emailPrefix}
+                        onChange={(e) => setForm({ ...form, emailPrefix: e.target.value })} required />
+                      <span style={{ position: "absolute", right: "12px", fontSize: "0.82rem", color: "#2c3e50", fontWeight: "600", pointerEvents: "none", whiteSpace: "nowrap" }}>@flatkart.com</span>
+                    </div>
                   </div>
                   <div style={s.group}>
                     <label style={s.label}>New Password <span style={{ color: "#aaa", fontWeight: "400" }}></span></label>
@@ -266,7 +279,7 @@ export default function AdminModerators() {
 
                   {SECTIONS.map((sec) => (
                     <div key={sec.key} style={s.matrixDataRow}>
-                      <div style={s.matrixLabelCell}>{sec.label}</div>
+                      <div style={s.matrixLabelCell}><span style={{ display: "flex", alignItems: "center" }}>{sec.icon}{sec.label}</span></div>
                       {["read", "update", "delete"].map((op) => {
                         const p = perm(sec.key, op);
                         const supported = sec.ops.includes(op);

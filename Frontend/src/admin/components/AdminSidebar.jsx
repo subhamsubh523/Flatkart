@@ -12,7 +12,7 @@ const TABS = [
   { key: "profile",    label: "My Profile", icon: <FiSettings size={16} /> },
 ];
 
-const EMPTY = { name: "", email: "", password: "" };
+const EMPTY = { name: "", emailPrefix: "", password: "" };
 
 export default function AdminSidebar({ active, setActive, admin, onLogout }) {
   const [showModal, setShowModal] = useState(false);
@@ -47,7 +47,7 @@ export default function AdminSidebar({ active, setActive, admin, onLogout }) {
     e.preventDefault();
     setError(""); setSaving(true);
     try {
-      const { data } = await AdminAPI.post("/admins", form);
+      const { data } = await AdminAPI.post("/admins", { ...form, email: `${form.emailPrefix}@flatkart.com` });
       setAdmins((prev) => [data, ...prev]);
       setSuccess("Admin added successfully!");
       setTimeout(closeModal, 1200);
@@ -88,21 +88,23 @@ export default function AdminSidebar({ active, setActive, admin, onLogout }) {
       </div>
 
       <div style={s.adminInfo}>
-        <div style={{ ...s.adminAvatar, background: admin?.isSuperAdmin ? "#f39c12" : "#e74c3c" }}>
-          {admin?.name?.[0]?.toUpperCase()}
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={s.adminName}>{admin?.name}</p>
-          <p style={{ ...s.adminRole, color: admin?.isSuperAdmin ? "#f39c12" : "#e74c3c" }}>
-            {admin?.isSuperAdmin ? "Super Admin" : "Admin"}
-          </p>
+        <div style={s.adminInfoTop}>
+          <div style={{ ...s.adminAvatar, background: admin?.isSuperAdmin ? "#f39c12" : "#e74c3c" }}>
+            {admin?.name?.[0]?.toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={s.adminName}>{admin?.name}</p>
+            <p style={{ ...s.adminRole, color: admin?.isSuperAdmin ? "#f39c12" : "#e74c3c" }}>
+              {admin?.isSuperAdmin ? "Super Admin" : "Admin"}
+            </p>
+          </div>
         </div>
         {admin?.isSuperAdmin && (
           <div style={{ display: "flex", gap: "6px" }}>
-            <button style={s.addBtn} onClick={openModal} title="Add New Admin">
+            <button style={{ ...s.addBtn, flex: 1 }} onClick={openModal} title="Add New Admin">
               <FiPlus size={13} />
             </button>
-            <button style={{ ...s.addBtn, background: "rgba(243,156,18,0.15)", borderColor: "rgba(243,156,18,0.4)", color: "#f39c12" }}
+            <button style={{ ...s.addBtn, flex: 1, background: "rgba(243,156,18,0.15)", borderColor: "rgba(243,156,18,0.4)", color: "#f39c12" }}
               onClick={() => setShowManage((v) => !v)} title="Manage Admins" data-manage-panel>
               <FiUsers size={13} />
             </button>
@@ -167,7 +169,7 @@ export default function AdminSidebar({ active, setActive, admin, onLogout }) {
         <div style={s.overlay} onClick={closeModal}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
-              <p style={s.modalTitle}><FiPlus size={15} style={{ marginRight: 6, verticalAlign: "middle" }} />Add New Admin</p>
+              <p style={s.modalTitle}><FiUserPlus size={15} style={{ marginRight: 6, verticalAlign: "middle" }} />Add New Admin</p>
               <button style={s.closeBtn} onClick={closeModal}><FiX size={16} /></button>
             </div>
             {error && <div style={s.errorBox}>{error}</div>}
@@ -179,9 +181,13 @@ export default function AdminSidebar({ active, setActive, admin, onLogout }) {
                   onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div style={s.group}>
-                <label style={s.label}>Email Address</label>
-                <input style={s.input} type="email" placeholder="Admin ID" value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                <label style={s.label}>Admin Address</label>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <input style={{ ...s.input, paddingRight: "110px" }} type="text" placeholder="Admin ID"
+                    value={form.emailPrefix}
+                    onChange={(e) => setForm({ ...form, emailPrefix: e.target.value })} required />
+                  <span style={{ position: "absolute", right: "10px", fontSize: "0.82rem", color: "#2c3e50", fontWeight: "600", pointerEvents: "none", whiteSpace: "nowrap" }}>@flatkart.com</span>
+                </div>
               </div>
               <div style={s.group}>
                 <label style={s.label}>Password</label>
@@ -236,9 +242,10 @@ const s = {
   brand: { display: "flex", alignItems: "center", gap: "10px", paddingBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.1)" },
   brandName: { margin: 0, fontWeight: "800", fontSize: "1rem", color: "#fff", letterSpacing: "2px" },
   brandSub: { margin: 0, fontSize: "0.72rem", color: "#e74c3c", fontWeight: "600", letterSpacing: "1px" },
-  adminInfo: { display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "12px" },
+  adminInfo: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "12px", display: "flex", flexDirection: "column", gap: "8px" },
+  adminInfoTop: { display: "flex", alignItems: "center", gap: "10px" },
   adminAvatar: { width: "38px", height: "38px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "1rem", flexShrink: 0 },
-  adminName: { margin: 0, fontWeight: "600", fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  adminName: { margin: 0, fontWeight: "600", fontSize: "0.88rem", wordBreak: "break-word", lineHeight: 1.4 },
   adminRole: { margin: 0, fontSize: "0.72rem", fontWeight: "600" },
   // Manage panel
   managePanel: { background: "rgba(255,255,255,0.05)", borderRadius: "10px", padding: "12px", border: "1px solid rgba(255,255,255,0.08)" },

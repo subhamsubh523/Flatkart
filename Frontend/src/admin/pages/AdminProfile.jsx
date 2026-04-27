@@ -3,7 +3,7 @@ import { FiSettings, FiUser, FiLock, FiCheckCircle, FiAlertCircle, FiEye, FiEyeO
 import AdminAPI from "../adminApi";
 
 export default function AdminProfile({ admin, onUpdate }) {
-  const [form, setForm] = useState({ name: admin?.name || "", email: admin?.email || "", currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [form, setForm] = useState({ name: admin?.name || "", emailPrefix: (admin?.email || "").replace("@flatkart.com", ""), currentPassword: "", newPassword: "", confirmPassword: "" });
   const [showCur, setShowCur] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showCon, setShowCon] = useState(false);
@@ -22,7 +22,7 @@ export default function AdminProfile({ admin, onUpdate }) {
     }
     setLoading(true);
     try {
-      const payload = { name: form.name, email: form.email };
+      const payload = { name: form.name, email: `${form.emailPrefix}@flatkart.com` };
       if (form.newPassword) { payload.currentPassword = form.currentPassword; payload.newPassword = form.newPassword; }
       const { data } = await AdminAPI.put("/profile", payload);
       const updated = { ...admin, name: data.name, email: data.email };
@@ -57,9 +57,13 @@ export default function AdminProfile({ admin, onUpdate }) {
                   onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div style={s.group}>
-                <label style={s.label}>Email Address</label>
-                <input style={s.input} type="email" placeholder="admin@flatkart.com" value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                <label style={s.label}>Admin Address</label>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <input style={{ ...s.input, paddingRight: "120px" }} type="text" placeholder="Admin ID"
+                    value={form.emailPrefix}
+                    onChange={(e) => setForm({ ...form, emailPrefix: e.target.value })} required />
+                  <span style={{ position: "absolute", right: "12px", fontSize: "0.88rem", color: "#2c3e50", fontWeight: "600", pointerEvents: "none", whiteSpace: "nowrap" }}>@flatkart.com</span>
+                </div>
               </div>
             </div>
           </div>

@@ -14,6 +14,7 @@ export default function Navbar() {
   const [dropOpen, setDropOpen] = useState(false);
   const [modal, setModal] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropRef = useRef(null);
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export default function Navbar() {
 
   const avatarSrc = user?.avatar ? (user.avatar.startsWith("http") ? user.avatar : `http://localhost:5000/uploads/${user.avatar}`) : null;
 
-  const handleLogout = () => { logout(); setDropOpen(false); toast.success("Logged out successfully"); navigate("/login"); };
+  const handleLogout = () => { logout(); setDropOpen(false); setMobileMenuOpen(false); toast.success("Logged out successfully"); navigate("/login"); };
 
   return (
     <>
@@ -45,7 +46,20 @@ export default function Navbar() {
           <span style={styles.brandText} className="nav-brand-text">FLAT<span style={{ color: user?.role === "owner" ? "#f1c40f" : "#1abc9c" }}>KART</span></span>
         </Link>
 
-        <div style={styles.links} className="nav-links">
+        <button 
+          style={styles.hamburger} 
+          className="hamburger-menu"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <div style={styles.hamburgerBox}>
+            <span style={mobileMenuOpen ? {...styles.hamburgerLine, ...styles.hamburgerLineTop} : styles.hamburgerLine}></span>
+            <span style={mobileMenuOpen ? {...styles.hamburgerLine, ...styles.hamburgerLineMiddle} : styles.hamburgerLine}></span>
+            <span style={mobileMenuOpen ? {...styles.hamburgerLine, ...styles.hamburgerLineBottom} : styles.hamburgerLine}></span>
+          </div>
+        </button>
+
+        <div style={styles.links} className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
           <Link to="/" style={linkStyle("/")} onClick={() => setMobileMenuOpen(false)}>Home</Link>
           {user?.role !== "owner" && <Link to="/flats" style={linkStyle("/flats")} onClick={() => setMobileMenuOpen(false)}>Flats</Link>}
           {user?.role === "owner" && <Link to="/dashboard" style={linkStyle("/dashboard")} onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>}
@@ -57,9 +71,10 @@ export default function Navbar() {
                 <span style={styles.chatBadge}>{unreadCount > 99 ? "99+" : unreadCount}</span>
               )}
             </Link>
-          )}        </div>
+          )}
+        </div>
 
-        <div style={styles.right}>
+        <div style={styles.right} className="nav-right">
           {user ? (
             <div style={styles.profileArea} ref={dropRef}>
               {user && <span style={styles.greeting}>Hi, {user.name?.toUpperCase()}</span>}
@@ -96,13 +111,19 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <div style={styles.authLinks}>
+            <div style={styles.authLinks} className="auth-links-desktop">
               <Link to="/login" style={styles.loginBtn}>Login</Link>
               <Link to="/register" style={styles.registerBtn}>Register</Link>
             </div>
           )}
-  
         </div>
+
+        {!user && mobileMenuOpen && (
+          <div style={styles.authLinksMobile} className="auth-links-mobile">
+            <Link to="/login" style={styles.loginBtn} onClick={() => setMobileMenuOpen(false)}>Login</Link>
+            <Link to="/register" style={styles.registerBtn} onClick={() => setMobileMenuOpen(false)}>Register</Link>
+          </div>
+        )}
 
 
       </nav>
@@ -327,6 +348,12 @@ const styles = {
   logo: { height: "38px", width: "90px", objectFit: "cover", borderRadius: "12px", border: "2px solid #1abc9c", flexShrink: 0, transform: "scale(1.2)", objectPosition:"10% center"},
   brandText: { fontSize: "1.2rem", fontWeight: "800", color: "#fff", letterSpacing: "3px", fontFamily: "'Segoe UI', sans-serif", whiteSpace: "nowrap" },
   brandAccent: { color: "#1abc9c" },
+  hamburger: { display: "none", background: "none", border: "none", color: "#fff", cursor: "pointer", padding: "8px", lineHeight: "1", transition: "all 0.3s ease" },
+  hamburgerBox: { display: "flex", flexDirection: "column", gap: "4px", width: "24px", height: "19px", justifyContent: "center" },
+  hamburgerLine: { display: "block", width: "100%", height: "3px", background: "#fff", borderRadius: "10px", transition: "all 0.3s ease" },
+  hamburgerLineTop: { transform: "rotate(45deg) translate(5px, 5px)" },
+  hamburgerLineMiddle: { opacity: 0 },
+  hamburgerLineBottom: { transform: "rotate(-45deg) translate(5px, -5px)" },
   links: { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" },
   link: { color: "#bdc3c7", textDecoration: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "0.9rem", whiteSpace: "nowrap" },
   activeLink: { color: "#1abc9c", background: "rgba(26,188,156,0.1)", borderBottom: "2px solid #1abc9c", borderRadius: "6px 6px 0 0" },
@@ -348,12 +375,9 @@ const styles = {
   divider: { margin: 0, border: "none", borderTop: "1px solid #f0f0f0" },
   dropItem: { display: "block", width: "100%", padding: "11px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: "0.9rem", color: "#333" },
   authLinks: { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" },
-  loginBtn: { color: "#ecf0f1", textDecoration: "none", padding: "5px 14px", borderRadius: "6px", fontSize: "0.85rem", border: "2px solid rgba(255,255,255,0.5)", whiteSpace: "nowrap", display: "inline-block", boxSizing: "border-box", lineHeight: "1.2" },
-  registerBtn: { color: "#fff", textDecoration: "none", padding: "5px 14px", borderRadius: "6px", fontSize: "0.85rem", background: "#1abc9c", whiteSpace: "nowrap", display: "inline-block", border: "2px solid #1abc9c", boxSizing: "border-box", lineHeight: "1.2" },
-  hamburger: { display: "none" },
-  mobileMenu: { display: "none" },
-  mobileLink: { display: "none" },
-  mobileLink2: { display: "none" },
+  authLinksMobile: { display: "none", gap: "8px", width: "100%", flexDirection: "column" },
+  loginBtn: { color: "#ecf0f1", textDecoration: "none", padding: "7px 14px", borderRadius: "6px", fontSize: "0.85rem", border: "2px solid rgba(255,255,255,0.5)", whiteSpace: "nowrap", display: "inline-block", boxSizing: "border-box", lineHeight: "1.2" },
+  registerBtn: { color: "#fff", textDecoration: "none", padding: "7px 14px", borderRadius: "6px", fontSize: "0.85rem", background: "#1abc9c", whiteSpace: "nowrap", display: "inline-block", border: "2px solid #1abc9c", boxSizing: "border-box", lineHeight: "1.2" },
   hamburger: { display: "none" },
   mobileMenu: { display: "none" },
   mobileLink: { display: "none" },

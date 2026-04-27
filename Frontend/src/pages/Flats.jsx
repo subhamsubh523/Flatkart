@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import API from "../api";
 import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/Spinner";
 import ImageSlider from "../components/ImageSlider";
-import { FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiX, FiChevronLeft, FiChevronRight, FiSearch, FiMapPin, FiHome, FiMaximize2, FiStar } from "react-icons/fi";
 
 function RatingBadge({ flatId }) {
   const [summary, setSummary] = useState(null);
@@ -12,13 +12,48 @@ function RatingBadge({ flatId }) {
     API.get(`/reviews/${flatId}/summary`).then(({ data }) => setSummary(data)).catch(() => {});
   }, [flatId]);
   if (!summary?.avg) return null;
-  return <span style={ratingStyle}>⭐ {summary.avg} ({summary.count})</span>;
+  return <span style={ratingStyle}><FiStar size={12} style={{ marginRight: 3, verticalAlign: "middle", fill: "#f39c12", color: "#f39c12" }} />{summary.avg} ({summary.count})</span>;
 }
 
 const ratingStyle = { background: "#fff8e1", color: "#f39c12", padding: "2px 8px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: "700", border: "1px solid #f9e4a0" };
 
 const INIT_LOC = { state: "", district: "", city: "", locality: "", pincode: "" };
 const INIT_FILTER = { type: "", minPrice: "", maxPrice: "", sortBy: "" };
+
+function CustomSelect({ value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+  const selected = options.find((o) => o.value === value);
+  return (
+    <div ref={ref} style={{ position: "relative", flex: 1, minWidth: "140px", width: 0 }}>
+      <div onClick={() => setOpen((o) => !o)}
+        style={{ padding: "10px 12px", fontSize: "0.95rem", borderRadius: "6px", border: "none", outline: "none", background: "rgba(255,255,255,0.95)", color: value ? "#2c3e50" : "#999", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", userSelect: "none", width: "100%", boxSizing: "border-box", overflow: "hidden" }}>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected ? selected.label : placeholder}</span>
+        <span style={{ fontSize: "0.7rem", marginLeft: 6, flexShrink: 0 }}>{open ? "▲" : "▼"}</span>
+      </div>
+      {open && (
+        <div
+          style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", borderRadius: "6px", boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 999, overflow: "hidden", border: "1px solid #e0e0e0", maxHeight: "220px", overflowY: "auto", overscrollBehavior: "contain" }}
+          onWheel={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
+        >
+          {options.map((o) => (
+            <div key={o.value} onClick={() => { onChange(o.value); setOpen(false); }}
+              style={{ padding: "10px 14px", fontSize: "0.92rem", cursor: "pointer", color: o.value === value ? "#fff" : "#1abc9c", background: o.value === value ? "#1abc9c" : "#fff", transition: "background 0.15s" }}
+              onMouseEnter={(e) => { if (o.value !== value) { e.currentTarget.style.background = "#eafaf1"; } }}
+              onMouseLeave={(e) => { if (o.value !== value) { e.currentTarget.style.background = "#fff"; } }}>
+              {o.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Flats() {
   const { user } = useAuth();
@@ -72,14 +107,13 @@ export default function Flats() {
           );
           const data = await res.json();
           const a = data.address || {};
-          setLoc((prev) => ({
-            ...prev,
-            city: a.city || a.town || a.village || a.suburb || "",
-            state: a.state || "",
-            pincode: a.postcode || "",
-            district: a.county || a.state_district || prev.district,
-            locality: "",
-          }));
+          const detectedState    = a.state || "";
+          const detectedDistrict = a.state_district || a.county || "";
+          const detectedCity     = a.city || a.town || a.village || a.suburb || a.municipality || "";
+          const detectedLocality = a.suburb || a.neighbourhood || a.quarter || "";
+          const detectedPincode  = a.postcode || "";
+          // Set state first, then after dropdown options load set the rest
+          setLoc({ state: detectedState, district: detectedDistrict, city: detectedCity, locality: detectedLocality, pincode: detectedPincode });
         } catch {
           setGeoError("Could not fetch location details. Try again.");
         } finally {
@@ -105,13 +139,13 @@ export default function Flats() {
   useEffect(() => {
     if (!loc.state) { setOpts((o) => ({ ...o, districts: [], cities: [], localities: [] })); return; }
     API.get(`/flats/location-options?field=district&state=${encodeURIComponent(loc.state)}`)
-      .then(({ data }) => setOpts((o) => ({ ...o, districts: data, cities: [], localities: [] })));
+      .then(({ data }) => setOpts((o) => ({ ...o, districts: data })));
   }, [loc.state]);
 
   useEffect(() => {
     if (!loc.district) { setOpts((o) => ({ ...o, cities: [], localities: [] })); return; }
     API.get(`/flats/location-options?field=city&district=${encodeURIComponent(loc.district)}`)
-      .then(({ data }) => setOpts((o) => ({ ...o, cities: data, localities: [] })));
+      .then(({ data }) => setOpts((o) => ({ ...o, cities: data })));
   }, [loc.district]);
 
   useEffect(() => {
@@ -153,9 +187,9 @@ export default function Flats() {
 
   const setLocField = (key) => (e) => setLoc((f) => {
     const next = { ...f, [key]: e.target.value };
-    if (key === "state") { next.district = ""; next.city = ""; next.locality = ""; }
-    if (key === "district") { next.city = ""; next.locality = ""; }
-    if (key === "city") next.locality = "";
+    if (key === "state") { next.district = ""; next.city = ""; next.locality = ""; setOpts((o) => ({ ...o, districts: [], cities: [], localities: [] })); }
+    if (key === "district") { next.city = ""; next.locality = ""; setOpts((o) => ({ ...o, cities: [], localities: [] })); }
+    if (key === "city") { next.locality = ""; setOpts((o) => ({ ...o, localities: [] })); }
     return next;
   });
 
@@ -171,17 +205,22 @@ export default function Flats() {
     return result;
   }, [allFlats, filters, bookedIds]);
 
-  const types = useMemo(() => [...new Set(allFlats.map((f) => f.type).filter(Boolean))].sort(), [allFlats]);
+  const FLAT_TYPES = ["Studio", "1BHK", "2BHK", "3BHK", "4BHK", "Duplex", "Penthouse", "Quater", "Others"];
+  const types = useMemo(() => {
+    const fromFlats = [...new Set(allFlats.map((f) => f.type).filter(Boolean))];
+    const merged = [...new Set([...FLAT_TYPES, ...fromFlats])];
+    return merged;
+  }, [allFlats]);
 
   return (
     <div style={styles.page}>
       {/* Search Hero */}
       <div style={styles.searchHero}>
-        <h1 style={styles.searchTitle}>🏘️ Find Your Perfect Flat</h1>
+        <h1 style={styles.searchTitle}><FiSearch size={22} style={{ marginRight: 8, verticalAlign: "middle" }} />Find Your Perfect Flat</h1>
         <p style={styles.searchSub}>Select or type your State, District and City to discover available flats</p>
 
         <button onClick={useMyLocation} disabled={geoLoading} style={styles.geoBtn}>
-          {geoLoading ? <><span style={styles.geoBtnSpinner} />Detecting location...</> : "📍Current Location"}
+          {geoLoading ? <><span style={styles.geoBtnSpinner} />Detecting location...</> : <><FiMapPin size={14} style={{ marginRight: 6 }} />Current Location</>}
         </button>
         {geoError && <p style={styles.geoError}>{geoError}</p>}
 
@@ -220,15 +259,21 @@ export default function Flats() {
         <div style={styles.filterBar}>
           <input style={styles.filterInput} placeholder="₹ Min price" type="number" value={filters.minPrice} onChange={setFilter("minPrice")} />
           <input style={styles.filterInput} placeholder="₹ Max price" type="number" value={filters.maxPrice} onChange={setFilter("maxPrice")} />
-          <select style={styles.filterInput} value={filters.type} onChange={setFilter("type")}>
-            <option value="">All Types</option>
-            {types.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select style={styles.filterInput} value={filters.sortBy} onChange={setFilter("sortBy")}>
-            <option value="">Sort By</option>
-            <option value="price_asc">Price: Low → High</option>
-            <option value="price_desc">Price: High → Low</option>
-          </select>
+          <CustomSelect
+            value={filters.type}
+            onChange={(v) => setFilters((f) => ({ ...f, type: v }))}
+            placeholder="All Types"
+            options={types.map((t) => ({ value: t, label: t }))}
+          />
+          <CustomSelect
+            value={filters.sortBy}
+            onChange={(v) => setFilters((f) => ({ ...f, sortBy: v }))}
+            placeholder="Sort By"
+            options={[
+              { value: "price_asc", label: "Price: Low → High" },
+              { value: "price_desc", label: "Price: High → Low" },
+            ]}
+          />
           <button style={styles.resetBtn} onClick={() => setFilters(INIT_FILTER)}>Reset</button>
         </div>
 
@@ -241,12 +286,12 @@ export default function Flats() {
         <Spinner fullPage />
       ) : isTenant && !hasLocation ? (
         <div style={styles.emptyBox}>
-          <p style={styles.emptyIcon}>🔍</p>
+          <p style={styles.emptyIcon}><FiSearch size={48} color="#bdc3c7" /></p>
           <p style={styles.emptyText}>Enter a State, District, City or Locality to search for flats.</p>
         </div>
       ) : filtered.length === 0 ? (
         <div style={styles.emptyBox}>
-          <p style={styles.emptyIcon}>🏚️</p>
+          <p style={styles.emptyIcon}><FiHome size={48} color="#bdc3c7" /></p>
           <p style={styles.emptyText}>No flats found for the selected location.</p>
           <button style={styles.resetBtn} onClick={() => setFilters(INIT_FILTER)}>Clear Filters</button>
         </div>
@@ -265,7 +310,7 @@ export default function Flats() {
                 </h3>
                 <p style={styles.cardDesc}>{flat.description}</p>
                 {(flat.roomWidth || flat.roomBreadth) && (
-                  <p style={styles.cardMeta}>📐 {[flat.roomWidth && `W: ${flat.roomWidth}`, flat.roomBreadth && `B: ${flat.roomBreadth}`].filter(Boolean).join(" × ")}</p>
+                  <p style={styles.cardMeta}><FiMaximize2 size={12} style={{ marginRight: 4, verticalAlign: "middle" }} />{[flat.roomWidth && `W: ${flat.roomWidth}`, flat.roomBreadth && `B: ${flat.roomBreadth}`].filter(Boolean).join(" × ")}</p>
                 )}
                 <div style={styles.cardFooter}>
                   <span style={styles.price}>₹{flat.price?.toLocaleString()}<span style={styles.perMonth}>/month</span></span>
@@ -344,7 +389,7 @@ const styles = {
   perMonth: { fontSize: "0.78rem", fontWeight: "400", color: "#888" },
   detailBtn: { padding: "7px 16px", background: "#1abc9c", color: "#fff", borderRadius: "6px", textDecoration: "none", fontSize: "0.85rem", fontWeight: "600" },
   emptyBox: { textAlign: "center", padding: "60px 0" },
-  emptyIcon: { fontSize: "3rem", margin: "0 0 12px" },
+  emptyIcon: { margin: "0 0 12px", display: "flex", justifyContent: "center" },
   emptyText: { color: "#888", marginBottom: "16px" },
   lightboxOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" },
   lightboxImg: { maxWidth: "92vw", maxHeight: "90vh", objectFit: "contain", borderRadius: "8px", boxShadow: "0 8px 40px rgba(0,0,0,0.6)", cursor: "default" },

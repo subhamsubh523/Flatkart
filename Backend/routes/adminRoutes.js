@@ -131,13 +131,15 @@ router.get("/stats", adminAuth, async (req, res) => {
   ]);
   const approvedBookings = await Booking.countDocuments({ status: "approved" });
   const rentedFlats = await Flat.countDocuments({ rented: true });
+  const activeFlats = await Flat.countDocuments({ visible: { $ne: false }, rented: { $ne: true } });
+  const hiddenFlats = await Flat.countDocuments({ visible: false });
   const restrictedOwners = await Owner.countDocuments({ bookingRestricted: true });
   const blockedOwners = await Owner.countDocuments({ blocked: true });
   const blockedTenants = await User.countDocuments({ blocked: true });
   const allowedOwners = owners - restrictedOwners;
   const unblockedOwners = owners - blockedOwners;
   const unblockedTenants = tenants - blockedTenants;
-  res.json({ owners, tenants, flats, bookings, approvedBookings, rentedFlats, restrictedOwners, allowedOwners, blockedOwners, unblockedOwners, blockedTenants, unblockedTenants });
+  res.json({ owners, tenants, flats, bookings, approvedBookings, rentedFlats, activeFlats, hiddenFlats, restrictedOwners, allowedOwners, blockedOwners, unblockedOwners, blockedTenants, unblockedTenants });
 });
 
 // ── Moderators ────────────────────────────────────────

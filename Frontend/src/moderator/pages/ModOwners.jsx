@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ModAPI from "../modApi";
 import AdminTable from "../../admin/components/AdminTable";
+import { FiUsers } from "react-icons/fi";
 
 export default function ModOwners({ mod }) {
   const [owners, setOwners] = useState([]);
@@ -52,7 +53,7 @@ export default function ModOwners({ mod }) {
     <div>
       <div style={cs.header}>
         <div>
-          <h2 style={cs.title}>🏢 Owners</h2>
+          <h2 style={cs.title}><FiUsers size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Owners</h2>
           <p style={cs.sub}>{owners.length} registered owners</p>
         </div>
         <input style={cs.search} placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />

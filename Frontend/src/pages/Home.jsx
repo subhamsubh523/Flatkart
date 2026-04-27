@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
+import { FiSearch, FiCalendar, FiMessageSquare, FiStar, FiLock, FiImage, FiList, FiCheckCircle, FiMessageCircle, FiBarChart2, FiBell, FiGlobe, FiHome, FiZap, FiUsers } from "react-icons/fi";
 import API from "../api";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,21 +23,21 @@ function useScrollReveal(ref) {
 }
 
 const tenantFeatures = [
-  { icon: "🔍", title: "Smart Search", desc: "Filter flats by location, price, and type to find exactly what you need." },
-  { icon: "📅", title: "Easy Booking", desc: "Book a flat in seconds. Owners get notified and can approve or reject instantly." },
-  { icon: "💬", title: "Live Chat", desc: "Chat in real-time with owners using our built-in Socket.io chat." },
-  { icon: "⭐", title: "Reviews", desc: "Read honest reviews from verified tenants before making a decision." },
-  { icon: "🔒", title: "Secure Auth", desc: "JWT-based authentication with OTP email verification for password reset." },
-  { icon: "🖼️", title: "Rich Profiles", desc: "Upload profile pictures, edit your name, and manage your account easily." },
+  { icon: <FiSearch size={24} />, title: "Smart Search", desc: "Filter flats by location, price, and type to find exactly what you need." },
+  { icon: <FiCalendar size={24} />, title: "Easy Booking", desc: "Book a flat in seconds. Owners get notified and can approve or reject instantly." },
+  { icon: <FiMessageSquare size={24} />, title: "Live Chat", desc: "Chat in real-time with owners using our built-in Socket.io chat." },
+  { icon: <FiStar size={24} />, title: "Reviews", desc: "Read honest reviews from verified tenants before making a decision." },
+  { icon: <FiLock size={24} />, title: "Secure Auth", desc: "JWT-based authentication with OTP email verification for password reset." },
+  { icon: <FiImage size={24} />, title: "Rich Profiles", desc: "Upload profile pictures, edit your name, and manage your account easily." },
 ];
 
 const ownerFeatures = [
-  { icon: "📋", title: "Easy Listing", desc: "List your flat in minutes with photos, price, type and description." },
-  { icon: "✅", title: "Booking Control", desc: "Review every booking request and approve or reject with a single click." },
-  { icon: "💬", title: "Direct Chat", desc: "Communicate directly with interested tenants through live chat." },
-  { icon: "📊", title: "Owner Dashboard", desc: "Manage all your listings and bookings from one powerful dashboard." },
-  { icon: "🔔", title: "Instant Alerts", desc: "Get notified immediately when a tenant books your flat." },
-  { icon: "🌍", title: "Wide Reach", desc: "Reach thousands of verified tenants actively searching for flats." },
+  { icon: <FiList size={24} />, title: "Easy Listing", desc: "List your flat in minutes with photos, price, type and description." },
+  { icon: <FiCheckCircle size={24} />, title: "Booking Control", desc: "Review every booking request and approve or reject with a single click." },
+  { icon: <FiMessageCircle size={24} />, title: "Direct Chat", desc: "Communicate directly with interested tenants through live chat." },
+  { icon: <FiBarChart2 size={24} />, title: "Owner Dashboard", desc: "Manage all your listings and bookings from one powerful dashboard." },
+  { icon: <FiBell size={24} />, title: "Instant Alerts", desc: "Get notified immediately when a tenant books your flat." },
+  { icon: <FiGlobe size={24} />, title: "Wide Reach", desc: "Reach thousands of verified tenants actively searching for flats." },
 ];
 
 const ownerSteps = [
@@ -72,7 +73,7 @@ function OwnerHome({ user, stats }) {
       {/* Owner Hero */}
       <section style={ownerStyles.hero}>
         <div style={styles.heroContent}>
-          <p style={ownerStyles.badge}>🏡 For Property Owners</p>
+          <p style={ownerStyles.badge}><FiHome size={13} style={{ marginRight: 6, verticalAlign: "middle" }} />For Property Owners</p>
           <h1 style={ownerStyles.heroTitle}>
             Turn Your Property Into <span style={ownerStyles.accent}>Passive Income</span>
           </h1>
@@ -80,7 +81,7 @@ function OwnerHome({ user, stats }) {
             List your flat on FLATKART and connect with thousands of verified tenants looking for their next home.
           </p>
           <div style={styles.heroBtns}>
-            <Link to="/dashboard" style={ownerStyles.heroPrimary}>List Your Flat Now</Link>
+            <Link to="/dashboard" state={{ tab: 5 }} style={ownerStyles.heroPrimary}>List Your Flat Now</Link>
             <Link to="/dashboard" style={ownerStyles.heroSecondary}>View Dashboard</Link>
           </div>
         </div>
@@ -104,7 +105,7 @@ function OwnerHome({ user, stats }) {
       {/* Why list on FLATKART */}
       <section style={ownerStyles.featSection}>
         <div style={styles.inner}>
-          <h2 style={styles.sectionTitle} className="scroll-reveal">💼 Why List on FLATKART?</h2>
+          <h2 style={styles.sectionTitle} className="scroll-reveal"><FiCheckCircle size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Why List on FLATKART?</h2>
           <div style={styles.featGrid}>
             {ownerFeatures.map((f, i) => (
               <div key={i} style={ownerStyles.featCard} className="scroll-reveal">
@@ -119,7 +120,7 @@ function OwnerHome({ user, stats }) {
 
       {/* How it works for owners */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle} className="scroll-reveal">🚀 How It Works for Owners</h2>
+        <h2 style={styles.sectionTitle} className="scroll-reveal"><FiZap size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />How It Works for Owners</h2>
         <div style={styles.stepsRow}>
           {ownerSteps.map((s, i) => (
             <div key={i} style={ownerStyles.stepCard} className={i % 2 === 0 ? "scroll-reveal-left" : "scroll-reveal-right"}>
@@ -136,7 +137,7 @@ function OwnerHome({ user, stats }) {
         <h2 style={styles.ctaTitle}>Ready to Start Earning?</h2>
         <p style={ownerStyles.ctaSub}>Join hundreds of owners already renting their properties on FLATKART.</p>
         <div style={styles.heroBtns}>
-          <Link to="/dashboard" style={ownerStyles.heroPrimary}>🏠 List a Flat Now</Link>
+          <Link to="/dashboard" state={{ tab: 5 }} style={ownerStyles.heroPrimary}><FiHome size={15} style={{ marginRight: 6, verticalAlign: "middle" }} />List a Flat Now</Link>
         </div>
       </section>
     </div>
@@ -178,7 +179,7 @@ function TenantHome({ user, stats }) {
       {/* Features */}
       <section style={styles.featSection}>
         <div style={styles.inner}>
-          <h2 style={styles.sectionTitle} className="scroll-reveal">✨ Why Choose FLATKART?</h2>
+          <h2 style={styles.sectionTitle} className="scroll-reveal"><FiStar size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Why Choose FLATKART?</h2>
           <div style={styles.featGrid}>
             {tenantFeatures.map((f, i) => (
               <div key={i} style={styles.featCard} className="scroll-reveal">
@@ -193,7 +194,7 @@ function TenantHome({ user, stats }) {
 
       {/* How it works */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle} className="scroll-reveal">🚀 How It Works</h2>
+        <h2 style={styles.sectionTitle} className="scroll-reveal"><FiZap size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />How It Works</h2>
         <div style={styles.stepsRow}>
           {tenantSteps.map((s, i) => (
             <div key={i} style={styles.stepCard} className={i % 2 === 0 ? "scroll-reveal-left" : "scroll-reveal-right"}>
@@ -237,7 +238,7 @@ const styles = {
   sectionTitle: { fontSize: "1.6rem", color: "#2c3e50", margin: "0 0 28px", textAlign: "center" },
   featGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" },
   featCard: { background: "#fff", borderRadius: "14px", padding: "28px 24px", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderBottom: "3px solid #1abc9c", display: "flex", flexDirection: "column", gap: "10px" },
-  featIconWrap: { width: "54px", height: "54px", borderRadius: "14px", background: "#eafaf1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem" },
+  featIconWrap: { width: "54px", height: "54px", borderRadius: "14px", background: "#eafaf1", display: "flex", alignItems: "center", justifyContent: "center", color: "#1abc9c" },
   featIcon: { fontSize: "1.6rem" },
   featTitle: { margin: 0, color: "#2c3e50", fontSize: "1rem", fontWeight: "700" },
   featDesc: { margin: 0, color: "#777", fontSize: "0.88rem", lineHeight: "1.7" },
@@ -263,7 +264,7 @@ const ownerStyles = {
   statVal: { fontSize: "1.8rem", fontWeight: "700", color: "#f1c40f" },
   featSection: { background: "#f8f9fa", padding: "48px 24px" },
   featCard: { background: "#fff", borderRadius: "14px", padding: "28px 24px", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderBottom: "3px solid #f1c40f", display: "flex", flexDirection: "column", gap: "10px" },
-  featIconWrap: { width: "54px", height: "54px", borderRadius: "14px", background: "rgba(241,196,15,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem" },
+  featIconWrap: { width: "54px", height: "54px", borderRadius: "14px", background: "rgba(241,196,15,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#f1c40f" },
   stepCard: { background: "#fff", borderRadius: "10px", padding: "28px 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", flex: "1", minWidth: "220px", maxWidth: "300px", textAlign: "center", borderTop: "3px solid #f1c40f" },
   stepNum: { width: "48px", height: "48px", borderRadius: "50%", background: "#f1c40f", color: "#1a252f", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "1rem", margin: "0 auto 14px" },
   trustSection: { background: "linear-gradient(135deg, #0f2027, #203a43)", padding: "48px 24px" },

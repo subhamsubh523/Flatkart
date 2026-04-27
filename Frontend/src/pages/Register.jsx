@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import API from "../api";
 import toast from "react-hot-toast";
 import Spinner from "../components/Spinner";
-import { FiUser, FiMail, FiLock, FiPhone, FiKey, FiEye, FiEyeOff, FiAlertCircle, FiSearch, FiCalendar, FiMessageSquare, FiStar, FiList, FiCheckSquare, FiBarChart2, FiArrowLeft, FiRefreshCw } from "react-icons/fi";
+import { FiUser, FiMail, FiLock, FiPhone, FiKey, FiEye, FiEyeOff, FiAlertCircle, FiSearch, FiCalendar, FiMessageSquare, FiStar, FiList, FiCheckSquare, FiBarChart2, FiArrowLeft, FiRefreshCw, FiHome, FiBriefcase, FiShield, FiAlertTriangle } from "react-icons/fi";
 
 export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", role: "tenant" });
@@ -112,16 +112,24 @@ export default function Register() {
   return (
     <div style={styles.page}>
       {/* Left Panel */}
-      <div style={{ ...styles.left, background: isOwner ? "linear-gradient(135deg, #0f2027, #203a43, #2c5364)" : "linear-gradient(135deg, #1a252f 0%, #2c3e50 100%)" }}>
+      <div style={{ ...styles.left, background: isOwner ? "linear-gradient(135deg, #0f2027, #203a43, #2c5364)" : "linear-gradient(135deg, #1a252f 0%, #2c3e50 100%)" }} className="auth-left-panel">
         <div style={styles.leftContent}>
-          <h1 style={{ ...styles.brand, color: accent }}>🏠 FLATKART</h1>
+          <h1 style={{ ...styles.brand, color: accent }}><FiHome size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />FLATKART</h1>
           {isOwner ? (
             <>
               <h2 style={styles.leftTitle}>List & Earn with <span style={{ color: "#f1c40f" }}>FLATKART</span></h2>
               <p style={styles.leftSub}>Join hundreds of property owners earning passive income by listing their flats on FLATKART.</p>
               <div style={styles.features}>
-                {["📋 List flats in minutes", "✅ Full booking control", "💬 Chat with tenants", "📊 Powerful dashboard"].map((f, i) => (
-                  <div key={i} style={{ ...styles.featureItem, borderLeft: "3px solid #f1c40f" }}><span>{f}</span></div>
+                {[
+                  { icon: <FiList size={15} />, text: "List flats in minutes" },
+                  { icon: <FiCheckSquare size={15} />, text: "Full booking control" },
+                  { icon: <FiMessageSquare size={15} />, text: "Chat with tenants" },
+                  { icon: <FiBarChart2 size={15} />, text: "Powerful dashboard" },
+                ].map((f, i) => (
+                  <div key={i} style={{ ...styles.featureItem, borderLeft: "3px solid #f1c40f" }}>
+                    <span style={{ color: "#f1c40f", display: "flex" }}>{f.icon}</span>
+                    <span>{f.text}</span>
+                  </div>
                 ))}
               </div>
             </>
@@ -130,8 +138,16 @@ export default function Register() {
               <h2 style={styles.leftTitle}>Find Your Perfect <span style={{ color: "#1abc9c" }}>Home</span></h2>
               <p style={styles.leftSub}>Join thousands of tenants who found their ideal flat on FLATKART — fast, easy, and verified.</p>
               <div style={styles.features}>
-                {["🔍 Smart flat search", "📅 Instant booking", "💬 Live chat with owners", "⭐ Verified reviews"].map((f, i) => (
-                  <div key={i} style={styles.featureItem}><span>{f}</span></div>
+                {[
+                  { icon: <FiSearch size={15} />, text: "Smart flat search" },
+                  { icon: <FiCalendar size={15} />, text: "Instant booking" },
+                  { icon: <FiMessageSquare size={15} />, text: "Live chat with owners" },
+                  { icon: <FiStar size={15} />, text: "Verified reviews" },
+                ].map((f, i) => (
+                  <div key={i} style={styles.featureItem}>
+                    <span style={{ color: "#1abc9c", display: "flex" }}>{f.icon}</span>
+                    <span>{f.text}</span>
+                  </div>
                 ))}
               </div>
             </>
@@ -140,7 +156,7 @@ export default function Register() {
       </div>
 
       {/* Right Panel */}
-      <div style={styles.right}>
+      <div style={styles.right} className="auth-right-panel">
         <div style={styles.card}>
 
           {step === 1 ? (
@@ -150,19 +166,20 @@ export default function Register() {
                 <p style={styles.subtitle}>Fill in the details to get started</p>
               </div>
 
-              {error && <div style={styles.errorBox}><span>⚠️</span> {error}</div>}
+              {error && <div style={styles.errorBox}><FiAlertCircle size={15} /> {error}</div>}
 
               {/* Role Toggle */}
+              <p style={{ margin: "0 0 8px", fontSize: "0.85rem", fontWeight: "600", color: "#444" }}>Signup as:</p>
               <div style={styles.roleToggle}>
                 <button type="button"
                   style={{ ...styles.roleBtn, ...(form.role === "tenant" ? styles.roleBtnActive : {}) }}
                   onClick={() => setForm({ ...form, role: "tenant" })}>
-                  🏠 Tenant
+                  <FiUser size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Tenant
                 </button>
                 <button type="button"
                   style={{ ...styles.roleBtn, ...(form.role === "owner" ? styles.roleBtnOwnerActive : {}) }}
                   onClick={() => setForm({ ...form, role: "owner" })}>
-                  🏢 Owner
+                  <FiBriefcase size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />Owner
                 </button>
               </div>
 
@@ -187,7 +204,7 @@ export default function Register() {
                   <label style={styles.label}>Phone Number</label>
                   <div style={styles.inputWrapper}>
                     <span style={styles.inputIcon}><FiPhone size={15} /></span>
-                    <input style={styles.input} placeholder="10-digit mobile number"
+                    <input style={styles.input} placeholder="Mobile Number"
                       type="tel"
                       value={form.phone === "" ? "" : "+91 " + form.phone}
                       onChange={(e) => {
@@ -239,24 +256,24 @@ export default function Register() {
                 <span style={styles.dividerLine} />
               </div>
 
-              <Link to="/login" style={styles.signInBtn}>Sign In</Link>
+              <Link to="/login" style={styles.signInBtn}>Login</Link>
             </>
           ) : (
             <>
               <div style={styles.cardHeader}>
                 <div style={{ ...styles.otpIconWrap, background: isOwner ? "rgba(241,196,15,0.12)" : "#eafaf1" }}>
-                  <span style={{ fontSize: "2rem" }}>🔐</span>
+                  <FiShield size={32} color={isOwner ? "#f1c40f" : "#1abc9c"} />
                 </div>
                 <h2 style={styles.title}>Verify Your Email</h2>
               </div>
 
-              {error && <div style={styles.errorBox}><span>⚠️</span> {error}</div>}
+              {error && <div style={styles.errorBox}><FiAlertCircle size={15} /> {error}</div>}
 
               <form onSubmit={handleVerifyAndRegister} style={styles.form}>
                 {/* Email OTP */}
                 <div>
                   <p style={{ margin: "0 0 8px", fontSize: "0.85rem", fontWeight: "700", color: "#444", display: "flex", alignItems: "center", gap: "6px" }}>
-                    📧 Email OTP <span style={{ fontWeight: "400", color: "#888", fontSize: "0.8rem" }}>({form.email})</span>
+                    <FiMail size={14} /> Email OTP <span style={{ fontWeight: "400", color: "#888", fontSize: "0.8rem" }}>({form.email})</span>
                   </p>
                   <div style={styles.otpRow} onPaste={handleOtpPaste}>
                     {otp.map((digit, i) => (
@@ -285,7 +302,7 @@ export default function Register() {
               </form>
 
 <button style={styles.backBtn} onClick={() => { setStep(1); setError(""); setOtp(["", "", "", "", "", ""]); }} type="button">
-                <FiArrowLeft size={14} style={{ marginRight: 4 }} /> Back
+                <FiArrowLeft size={14} style={{ marginRight: 4 }} /> Go Back
               </button>
             </>
           )}
@@ -296,7 +313,7 @@ export default function Register() {
 }
 
 const styles = {
-  page: { display: "flex", minHeight: "calc(100vh - 60px)" },
+  page: { display: "flex", minHeight: "calc(100vh - 60px)", overflow: "auto", flexDirection: "row", flexWrap: "nowrap" },
   left: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px" },
   leftContent: { maxWidth: "400px" },
   brand: { fontSize: "1.5rem", margin: "0 0 32px", fontWeight: "800" },
@@ -305,7 +322,7 @@ const styles = {
   features: { display: "flex", flexDirection: "column", gap: "12px" },
   featureItem: { display: "flex", alignItems: "center", gap: "10px", color: "#ecf0f1", fontSize: "0.95rem", background: "rgba(255,255,255,0.06)", padding: "10px 16px", borderRadius: "8px", borderLeft: "3px solid #1abc9c" },
   right: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5", padding: "32px 24px" },
-  card: { background: "#fff", borderRadius: "16px", padding: "40px", width: "100%", maxWidth: "420px", boxShadow: "0 8px 32px rgba(0,0,0,0.1)" },
+  card: { background: "#fff", borderRadius: "16px", padding: "40px", width: "100%", maxWidth: "420px", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", overflow: "hidden" },
   cardHeader: { marginBottom: "20px", textAlign: "center" },
   otpIconWrap: { width: "64px", height: "64px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" },
   title: { margin: "0 0 6px", fontSize: "1.7rem", color: "#2c3e50", fontWeight: "700" },
@@ -321,7 +338,7 @@ const styles = {
   inputWrapper: { position: "relative", display: "flex", alignItems: "center" },
   inputIcon: { position: "absolute", left: "12px", fontSize: "0.95rem", pointerEvents: "none" },
   input: { width: "100%", padding: "11px 12px 11px 38px", fontSize: "0.97rem", borderRadius: "8px", border: "1.5px solid #e0e0e0", outline: "none", boxSizing: "border-box", background: "#fafafa" },
-  eyeBtn: { position: "absolute", right: "12px", background: "none", border: "none", cursor: "pointer", fontSize: "1rem", padding: 0 },
+  eyeBtn: { position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "1rem", padding: 0, color: "#666", zIndex: 1 },
   btn: { padding: "13px", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "1rem", fontWeight: "700", letterSpacing: "0.3px", marginTop: "4px" },
   otpRow: { display: "flex", gap: "10px", justifyContent: "center" },
   otpBox: { width: "48px", height: "56px", textAlign: "center", fontSize: "1.5rem", fontWeight: "700", borderRadius: "10px", border: "2px solid #e0e0e0", outline: "none", background: "#fafafa", transition: "border-color 0.2s, box-shadow 0.2s", color: "#2c3e50" },

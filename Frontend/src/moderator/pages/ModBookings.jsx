@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ModAPI from "../modApi";
 import AdminTable from "../../admin/components/AdminTable";
+import { FiBookmark, FiCheckCircle, FiSlash, FiUserCheck } from "react-icons/fi";
 
 const statusColor = {
   pending:  { bg: "#fef9e7", color: "#f39c12" },
@@ -73,7 +74,9 @@ export default function ModBookings({ mod }) {
     { key: "status", label: "Status", render: (b) => (
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         <span style={{ ...cs.badge, background: b.owner?.bookingRestricted ? "#fdf0f0" : "#eafaf1", color: b.owner?.bookingRestricted ? "#e74c3c" : "#27ae60" }}>
-          {b.owner?.bookingRestricted ? "🚫 Restricted" : "✅ Allowed"}
+          {b.owner?.bookingRestricted
+            ? <><FiSlash size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />Restricted</>
+            : <><FiCheckCircle size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />Allowed</>}
         </span>
       </div>
     )},
@@ -85,7 +88,9 @@ export default function ModBookings({ mod }) {
             style={{ ...cs.blockBtn, background: b.owner.bookingRestricted ? "#eafaf1" : "#fdf0f0", color: b.owner.bookingRestricted ? "#27ae60" : "#e74c3c", border: `1px solid ${b.owner.bookingRestricted ? "#a9dfbf" : "#f5c6cb"}` }}
             onClick={() => toggleOwnerBooking(b)}
           >
-            {b.owner.bookingRestricted ? "✅ Unblock" : "🚫 Block"}
+            {b.owner.bookingRestricted
+              ? <><FiUserCheck size={12} style={{ marginRight: 4 }} />Unblock</>
+              : <><FiSlash size={12} style={{ marginRight: 4 }} />Block</>}
           </button>
         )}
         {has("bookings:delete") && (
@@ -100,7 +105,7 @@ export default function ModBookings({ mod }) {
     <div>
       <div style={cs.header}>
         <div>
-          <h2 style={cs.title}>📋 Bookings</h2>
+          <h2 style={cs.title}><FiBookmark size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />Bookings</h2>
           <p style={cs.sub}>{bookings.length} total bookings</p>
         </div>
         <div style={cs.filters}>
